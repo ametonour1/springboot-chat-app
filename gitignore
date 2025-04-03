@@ -1,0 +1,17 @@
+# Exclude Kafka server directory
+kafka_2.13-3.6.0/
+
+# Exclude target or build directories (for Maven projects)
+target/
+
+# Exclude IDE-specific files (e.g., IntelliJ IDEA, VS Code)
+.idea/
+.vscode/
+
+# Exclude local environment configurations or logs
+*.log
+*.env
+
+# Exclude files from the system
+.DS_Store  # macOS system files
+Thumbs.db  # Windows system files
