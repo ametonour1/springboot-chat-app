@@ -7,19 +7,20 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/users")  // Base URL for User endpoints
 public class UserController {
 
     @Autowired
     private UserService userService;
 
+    // Register a new user
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User user) {
+    public ResponseEntity<String> register(@RequestBody User user) {
         try {
-            User savedUser = userService.registerUser(user);
-            return ResponseEntity.ok(savedUser);
+            User registeredUser = userService.registerUser(user.getUsername(), user.getEmail(), user.getPassword());
+            return ResponseEntity.ok("User registered successfully: " + registeredUser.getUsername());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Error registering user: " + e.getMessage());
         }
     }
 }

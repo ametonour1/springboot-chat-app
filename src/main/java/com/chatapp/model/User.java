@@ -1,11 +1,15 @@
 package com.chatapp.model;
 
-import jakarta.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.time.LocalDateTime;
-
 
 @Getter
 @Setter
@@ -13,7 +17,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users") // Table name in PostgreSQL
 public class User {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;  // Auto-incremented Primary Key
