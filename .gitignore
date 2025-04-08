@@ -15,3 +15,6 @@ target/
 # Exclude files from the system
 .DS_Store  # macOS system files
 Thumbs.db  # Windows system files
+
+# Ignore application properties file
+/src/main/resources/application.properties
