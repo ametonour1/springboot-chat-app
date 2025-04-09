@@ -17,4 +17,15 @@ public class EmailController {
         emailService.sendSimpleEmail("onurewrenos@gmail.com", "Test Subject", "This is a test email.");
         return "Email sent!";
     }
+
+    @GetMapping("/sendTemplateEmail")
+    public String sendTemplateEmail() {
+     emailService.sendHtmlEmail(
+        "onurewrenos@gmail.com",
+        "Welcome to the platform!",
+        "Hey John ",
+        "Thanks for joining. We’re excited to have you!"
+    );
+    return "Email sent!";
+}
 }
