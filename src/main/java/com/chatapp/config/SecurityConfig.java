@@ -16,7 +16,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http
             .csrf().disable()
             .authorizeRequests()
-                .antMatchers("/api/users/**").permitAll()  // Allow access to register endpoint
+                .antMatchers("/api/users/**", "/sendTestEmail").permitAll()  // Allow access to register endpoint
                 .anyRequest().authenticated();  // Authenticate other requests
     }
 }
