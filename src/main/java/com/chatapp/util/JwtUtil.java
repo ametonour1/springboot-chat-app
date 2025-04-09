@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.Optional;
 import java.security.Key;
 
 import com.chatapp.model.User; 
@@ -23,9 +24,9 @@ public class JwtUtil {
     public String generateToken(User user) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
-
+    
         Key key = Keys.hmacShaKeyFor(secretKey.getBytes());
-
+    
         return Jwts.builder()
                 .setSubject(user.getEmail())
                 .claim("userId", user.getId())
