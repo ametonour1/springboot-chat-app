@@ -32,10 +32,32 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
+            // Get user details to include in response
+            User user = userService.getUserByEmail(request.getEmail());
+    
+            // Use existing loginUser method to validate and return token
             String token = userService.loginUser(request.getEmail(), request.getPassword());
-            return ResponseEntity.ok(Map.of("token", token));
+    
+            return ResponseEntity.ok(Map.of(
+                "token", token,
+                "userId", user.getId(),
+                "email", user.getEmail(),
+                "username", user.getUsername()
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
+    }
+    
+
+    @PostMapping("/logout")
+    public String logoutUser(@RequestParam String userId) {
+        userService.logoutUser(userId);
+        return "User logged out successfully!";
+    }
+
+    @GetMapping("/status")
+    public boolean checkUserStatus(@RequestParam String userId) {
+        return userService.checkUserOnlineStatus(userId);
     }
 }
