@@ -1,5 +1,7 @@
 package com.chatapp.service;
 
+import java.util.Map;
+
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
@@ -37,24 +39,26 @@ public class EmailService {
         }
     }
 
-    public void sendHtmlEmail(String to, String subject, String title, String message) {
+    public void sendHtmlEmail(String to, String subject, String templateName, Map<String, Object> templateVariables) {
         MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-
+    
         try {
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
             helper.setTo(to);
             helper.setSubject(subject);
-
+    
+            // Create a context and set template variables from the map
             Context context = new Context();
-            context.setVariable("title", title);
-            context.setVariable("message", message);
-
-            String htmlContent = templateEngine.process("TestTemplate", context);
-            helper.setText(htmlContent, true); // true = HTML
-
+            context.setVariables(templateVariables);
+    
+            // Process the template with the variables
+            String htmlContent = templateEngine.process(templateName, context);
+            helper.setText(htmlContent, true); // true = HTML content
+    
+            // Send the email
             javaMailSender.send(mimeMessage);
         } catch (MessagingException e) {
-            e.printStackTrace(); // or log the error
+            e.printStackTrace(); // Handle the error appropriately (e.g., log it)
         }
     }
 }

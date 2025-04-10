@@ -34,6 +34,15 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();  // Timestamp for user creation
 
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiration")
+    private LocalDateTime resetTokenExpiration;
+
+    @Column(name = "is_verified")
+    private boolean isVerified = false; // default false
+
     // Constructor (optional)
     public User(String username, String email, String password) {
         this.username = username;

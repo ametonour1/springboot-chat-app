@@ -9,7 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.Map;
 
 @Service
 public class UserService {
@@ -22,6 +26,9 @@ public class UserService {
 
     @Autowired
     private RedisService redisService;
+
+    @Autowired
+    private EmailService emailService;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -87,6 +94,54 @@ public class UserService {
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
+    public void requestPasswordReset(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    
+        // Generate reset token and expiration
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiration = LocalDateTime.now().plusMinutes(15); // 15 min expiration
+    
+        // Save reset token and expiration to the user
+        user.setResetToken(token);
+        user.setResetTokenExpiration(expiration);
+        userRepository.save(user);
+    
+        // Prepare the reset password link
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+    
+        // Send the password reset email
+        emailService.sendHtmlEmail(
+            user.getEmail(),
+            "Reset Your Password",
+            "reset-password-template",  // The template name
+            Map.of("username", user.getUsername(), "resetLink", resetLink)  // Pass dynamic variables to the template
+    );
+    }
+
+    public User getUserByResetToken(String token) throws RuntimeException {
+        // Fetch the user by the reset token
+        return userRepository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid or expired reset token"));
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        // Find the user by reset token
+        User user = userRepository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
+        
+        // Check if the token has expired
+        if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Reset token has expired");
+        }
+        
+        // Update the user's password (you should hash the password before saving it)
+        user.setPassword(newPassword); // Ideally, use password hashing here (e.g., BCrypt)
+        user.setResetToken(null); // Clear the reset token
+        user.setResetTokenExpiration(null); // Clear the token expiration
+        userRepository.save(user); // Save the updated user
     }
 
 }

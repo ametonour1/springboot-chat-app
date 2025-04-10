@@ -18,14 +18,5 @@ public class EmailController {
         return "Email sent!";
     }
 
-    @GetMapping("/sendTemplateEmail")
-    public String sendTemplateEmail() {
-     emailService.sendHtmlEmail(
-        "onurewrenos@gmail.com",
-        "Welcome to the platform!",
-        "Hey John ",
-        "Thanks for joining. We’re excited to have you!"
-    );
-    return "Email sent!";
-}
+
 }

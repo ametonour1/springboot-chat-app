@@ -5,7 +5,10 @@ import com.chatapp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 import java.util.Map;
 import com.chatapp.dto.LoginRequest;
 
@@ -59,5 +62,46 @@ public class UserController {
     @GetMapping("/status")
     public boolean checkUserStatus(@RequestParam String userId) {
         return userService.checkUserOnlineStatus(userId);
+    }
+
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<String> requestPasswordReset(@RequestParam String email) {
+        try {
+            userService.requestPasswordReset(email);
+            return ResponseEntity.ok("Password reset email sent successfully.");
+        } catch (RuntimeException e) {
+            // If user not found or any other error occurs
+            return ResponseEntity.status(400).body("Error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/reset-password")
+    public String showResetPasswordForm(@RequestParam("token") String token, Model model) {
+        try {
+            User user = userService.getUserByResetToken(token);
+    
+            // Check if the token has expired
+            if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
+                throw new RuntimeException("Reset token has expired");
+            }
+    
+            // Add the token to the model so it can be used in the form
+            model.addAttribute("token", token);
+            return "resetPasswordForm"; // This is the view that will contain the form
+        } catch (Exception e) {
+            return "errorPage"; // A page for invalid or expired token
+        }
+    }
+
+    @PostMapping("/update-password")
+    public String updatePassword(@RequestParam("token") String token, @RequestParam("newPassword") String newPassword) {
+        try {
+            // Call UserService to reset the password
+            userService.resetPassword(token, newPassword);
+            return "passwordResetSuccess"; // return success page view
+        } catch (RuntimeException e) {
+            // If token is invalid or expired
+            return "errorPage"; // return error page view
+        }
     }
 }
