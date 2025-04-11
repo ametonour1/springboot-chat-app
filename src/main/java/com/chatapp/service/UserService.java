@@ -110,7 +110,7 @@ public class UserService {
         userRepository.save(user);
     
         // Prepare the reset password link
-        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+        String resetLink = "http://localhost:3000/api/users/reset-password?token=" + token;
     
         // Send the password reset email
         emailService.sendHtmlEmail(
@@ -136,9 +136,10 @@ public class UserService {
         if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Reset token has expired");
         }
+        String encryptedPassword = passwordEncoder.encode(newPassword);
         
         // Update the user's password (you should hash the password before saving it)
-        user.setPassword(newPassword); // Ideally, use password hashing here (e.g., BCrypt)
+        user.setPassword(encryptedPassword); // Ideally, use password hashing here (e.g., BCrypt)
         user.setResetToken(null); // Clear the reset token
         user.setResetTokenExpiration(null); // Clear the token expiration
         userRepository.save(user); // Save the updated user

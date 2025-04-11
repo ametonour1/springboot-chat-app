@@ -76,32 +76,35 @@ public class UserController {
     }
 
     @GetMapping("/reset-password")
-    public String showResetPasswordForm(@RequestParam("token") String token, Model model) {
+    public ResponseEntity<?> validateResetToken(@RequestParam("token") String token) {
         try {
             User user = userService.getUserByResetToken(token);
-    
+
             // Check if the token has expired
             if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
-                throw new RuntimeException("Reset token has expired");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Reset token has expired"));
             }
-    
-            // Add the token to the model so it can be used in the form
-            model.addAttribute("token", token);
-            return "resetPasswordForm"; // This is the view that will contain the form
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Token is valid",
+                    "token", token
+            ));
         } catch (Exception e) {
-            return "errorPage"; // A page for invalid or expired token
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid or expired token"));
         }
     }
 
     @PostMapping("/update-password")
-    public String updatePassword(@RequestParam("token") String token, @RequestParam("newPassword") String newPassword) {
+    public ResponseEntity<?> updatePassword(@RequestParam("token") String token,
+                                            @RequestParam("newPassword") String newPassword) {
         try {
-            // Call UserService to reset the password
             userService.resetPassword(token, newPassword);
-            return "passwordResetSuccess"; // return success page view
+            return ResponseEntity.ok(Map.of("message", "Password has been successfully reset"));
         } catch (RuntimeException e) {
-            // If token is invalid or expired
-            return "errorPage"; // return error page view
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }
