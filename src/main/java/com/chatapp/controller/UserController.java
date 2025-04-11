@@ -5,7 +5,10 @@ import com.chatapp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 import java.util.Map;
 import com.chatapp.dto.LoginRequest;
 
@@ -59,5 +62,49 @@ public class UserController {
     @GetMapping("/status")
     public boolean checkUserStatus(@RequestParam String userId) {
         return userService.checkUserOnlineStatus(userId);
+    }
+
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<String> requestPasswordReset(@RequestParam String email) {
+        try {
+            userService.requestPasswordReset(email);
+            return ResponseEntity.ok("Password reset email sent successfully.");
+        } catch (RuntimeException e) {
+            // If user not found or any other error occurs
+            return ResponseEntity.status(400).body("Error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/reset-password")
+    public ResponseEntity<?> validateResetToken(@RequestParam("token") String token) {
+        try {
+            User user = userService.getUserByResetToken(token);
+
+            // Check if the token has expired
+            if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Reset token has expired"));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Token is valid",
+                    "token", token
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid or expired token"));
+        }
+    }
+
+    @PostMapping("/update-password")
+    public ResponseEntity<?> updatePassword(@RequestParam("token") String token,
+                                            @RequestParam("newPassword") String newPassword) {
+        try {
+            userService.resetPassword(token, newPassword);
+            return ResponseEntity.ok(Map.of("message", "Password has been successfully reset"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }
