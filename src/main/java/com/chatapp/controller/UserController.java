@@ -64,6 +64,16 @@ public class UserController {
         return userService.checkUserOnlineStatus(userId);
     }
 
+    @PostMapping("/verify-email")
+    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+    try {
+        userService.verifyEmail(token); // Call the service to verify the token
+        return ResponseEntity.ok("Email verified successfully.");
+    } catch (RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+    }
+}
+
     @PostMapping("/request-password-reset")
     public ResponseEntity<String> requestPasswordReset(@RequestParam String email) {
         try {

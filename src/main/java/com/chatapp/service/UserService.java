@@ -42,11 +42,29 @@ public class UserService {
             throw new RuntimeException("Email already taken");
         }
     
-        // Encrypt password before saving
         String encryptedPassword = passwordEncoder.encode(password);
     
         User user = new User(username, email, encryptedPassword);
-        return userRepository.save(user); // Save the user to the database
+        
+        String verificationToken = UUID.randomUUID().toString();
+        LocalDateTime expiration = LocalDateTime.now().plusMinutes(15); 
+
+        user.setResetToken(verificationToken);
+        user.setResetTokenExpiration(expiration);
+
+
+        User savedUser = userRepository.save(user);
+
+       String verificationLink = "http://localhost:8080/api/users/verify-email?token=" + verificationToken;
+       emailService.sendHtmlEmail(
+        user.getEmail(),
+        "Verify your Email",
+        "verification-email-template",  // The template name
+        Map.of("username", user.getUsername(), "verificationLink", verificationLink)  // Pass dynamic variables to the template
+);
+
+    // Return the saved user
+    return savedUser;
     }
     
     public String loginUser(String email, String password) {
@@ -55,6 +73,18 @@ public class UserService {
     
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid email or password");
+        }
+
+            // Check if the user's email is verified
+            if (!user.isVerified()) {
+            // Email not verified, check if the verification token has expired
+                if (user.getResetTokenExpiration() != null && user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
+                    // Token has expired, trigger a function to resend verification email
+                    resendVerificationEmail(user);
+                } else {
+                    // Token has not expired, return a message to the user
+                    throw new RuntimeException("Please verify your email before logging in.");
+                }
         }
     
         redisService.markUserOnline(user.getId().toString());
@@ -94,6 +124,46 @@ public class UserService {
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
+    public void verifyEmail(String token) {
+        User user = userRepository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid token"));
+    
+        // Check if the token has expired or is already used
+        if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Verification token has expired.");
+        }
+    
+        // Mark the user as verified
+        user.setVerified(true);
+        user.setResetToken(null); // Clear the token after verification
+        user.setResetTokenExpiration(null); // Clear the expiration date as well
+        userRepository.save(user); // Save the updated user
+    }
+
+    public void resendVerificationEmail(User user) {
+        // Generate a new verification token
+        String newVerificationToken = UUID.randomUUID().toString();
+    
+        // Set the expiration time (e.g., 24 hours from now)
+        LocalDateTime newExpirationTime = LocalDateTime.now().plusHours(24);
+    
+        // Update the user record with the new token and expiration time
+        user.setResetToken(newVerificationToken);
+        user.setResetTokenExpiration(newExpirationTime);
+    
+        // Save the updated user to the database
+        userRepository.save(user);
+    
+        // Send the verification email
+        String verificationLink = "http://localhost:8080/api/users/verify-email?token=" + newVerificationToken;
+        emailService.sendHtmlEmail(
+                user.getEmail(),
+                "Verify Your Email",
+                "verification-email-template",  // The template name
+                Map.of("username", user.getUsername(), "verificationLink", verificationLink)  // Pass dynamic variables to the template
+        );
     }
 
     public void requestPasswordReset(String email) {
