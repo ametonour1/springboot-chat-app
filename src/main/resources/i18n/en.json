@@ -1,0 +1,8 @@
+{
+  "USERNAME_TAKEN": "Username already taken.",
+  "EMAIL_TAKEN": "Email is already registered.",
+  "USER_REGISTERED": "User registered successfully.",
+  "INVALID_CREDENTIALS": "Invalid username or password.",
+  "MESSAGE_RECEIVED": "Message received.",
+  "ERROR_OCCURRED": "An error occurred. Please try again later."
+}
