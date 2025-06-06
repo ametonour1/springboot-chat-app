@@ -6,9 +6,24 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.chatapp.util.TranslationService;
+
 @RestController
 @RequestMapping("/api/test")
 public class TestController {
+
+     private final TranslationService translationService;
+
+    public TestController(TranslationService translationService) {
+        this.translationService = translationService;
+    }
+
+    @GetMapping("/public/message")
+    public String getMessage(@RequestParam String lang, @RequestParam String key) {
+        String translatedMessage = translationService.getTranslation(lang, key);
+        System.out.println("Translated message: " + translatedMessage);
+        return translatedMessage;
+    }
 
     @GetMapping("/public")
     public ResponseEntity<String> publicEndpoint() {
