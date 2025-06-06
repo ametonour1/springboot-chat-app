@@ -1,7 +1,8 @@
 package com.chatapp.exception;
 
-public class UsernameTakenException extends RuntimeException {
-    public UsernameTakenException() {
-        super("Username already taken");
+public class UsernameTakenException extends BaseLocalizedException {
+    @Override
+    public String getMessageKey() {
+        return "error.usernameTaken";
     }
 }

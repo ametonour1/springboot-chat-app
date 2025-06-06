@@ -1,8 +1,8 @@
 {
-  "USERNAME_TAKEN": "El nombre de usuario ya está en uso.",
-  "EMAIL_TAKEN": "El correo electrónico ya está registrado.",
-  "USER_REGISTERED": "Usuario registrado con éxito.",
-  "INVALID_CREDENTIALS": "Nombre de usuario o contraseña incorrectos.",
-  "MESSAGE_RECEIVED": "Mensaje recibido.",
-  "ERROR_OCCURRED": "Ocurrió un error. Por favor, inténtelo de nuevo más tarde."
+  "error.usernameTaken": "El nombre de usuario ya está en uso.",
+  "error.emailTaken": "El correo electrónico ya está registrado.",
+  "success.userRegistered": "Usuario registrado con éxito.",
+  "error.invalidCredentials": "Nombre de usuario o contraseña inválidos.",
+  "info.messageReceived": "Mensaje recibido.",
+  "error.errorOccurred": "Ocurrió un error. Por favor, inténtalo de nuevo más tarde."
 }

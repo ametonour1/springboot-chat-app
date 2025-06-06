@@ -1,8 +1,8 @@
 {
-  "USERNAME_TAKEN": "Το όνομα χρήστη χρησιμοποιείται ήδη.",
-  "EMAIL_TAKEN": "Το email έχει ήδη καταχωρηθεί.",
-  "USER_REGISTERED": "Ο χρήστης καταχωρήθηκε με επιτυχία.",
-  "INVALID_CREDENTIALS": "Λανθασμένο όνομα χρήστη ή κωδικός.",
-  "MESSAGE_RECEIVED": "Το μήνυμα ελήφθη.",
-  "ERROR_OCCURRED": "Παρουσιάστηκε σφάλμα. Παρακαλώ δοκιμάστε ξανά αργότερα."
+  "error.usernameTaken": "Benutzername ist bereits vergeben.",
+  "error.emailTaken": "Die E-Mail ist bereits registriert.",
+  "success.userRegistered": "Benutzer erfolgreich registriert.",
+  "error.invalidCredentials": "Ungültiger Benutzername oder Passwort.",
+  "info.messageReceived": "Nachricht erhalten.",
+  "error.errorOccurred": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut."
 }
