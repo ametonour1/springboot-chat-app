@@ -1,8 +1,12 @@
 {
+  "error.missingUsername": "Username is required.",
+  "error.missingEmail": "Email is required.",
+  "error.missingPassword": "Password is required.",
+
   "error.usernameTaken": "Username already taken.",
   "error.emailTaken": "Email is already registered.",
   "success.userRegistered": "User registered successfully.",
   "error.invalidCredentials": "Invalid username or password.",
   "info.messageReceived": "Message received.",
-  "error.errorOccurred": "An error occurred. Please try again later."
+  "error.general": "An error occurred. Please try again later."
 }

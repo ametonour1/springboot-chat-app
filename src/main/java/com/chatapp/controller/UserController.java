@@ -2,6 +2,8 @@ package com.chatapp.controller;
 
 import com.chatapp.model.User;
 import com.chatapp.service.UserService;
+import com.chatapp.validation.UserValidators;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +26,7 @@ public class UserController {
     // Register a new user
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody User user) {
-   
+            UserValidators.RegisterValidator.validate(user);
             User registeredUser = userService.registerUser(user.getUsername(), user.getEmail(), user.getPassword());
             return ResponseEntity.ok("User registered successfully: " + registeredUser.getUsername());
   

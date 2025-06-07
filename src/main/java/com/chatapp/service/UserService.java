@@ -1,7 +1,7 @@
 package com.chatapp.service;
 
-import com.chatapp.exception.EmailTakenException;
-import com.chatapp.exception.UsernameTakenException;
+import com.chatapp.exception.UserExceptions;
+
 import com.chatapp.model.User;
 import com.chatapp.repository.UserRepository;
 import com.chatapp.util.JwtUtil;
@@ -38,10 +38,10 @@ public class UserService {
     public User registerUser(String username, String email, String password) {
         // Check if user already exists
         if (userRepository.findByUsername(username).isPresent()) {
-            throw new UsernameTakenException();
+            throw new UserExceptions.UsernameTakenException();
         }
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new EmailTakenException();
+            throw new UserExceptions.EmailTakenException();
         }
     
         String encryptedPassword = passwordEncoder.encode(password);

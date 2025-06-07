@@ -12,12 +12,33 @@ public class UserExceptions {
         }
     }
 
+     public static class MissingEmailException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "error.missingEmail";
+        }
+    }
+
     public static class MissingPasswordException extends BaseLocalizedException {
         @Override
         public String getMessageKey() {
             return "error.missingPassword";
         }
     }
+
+    public static class UsernameTakenException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "error.usernameTaken";
+        }
+}
+    public static class EmailTakenException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "error.emailTaken";
+        }
+    }
+
 
     // Add other user exceptions here similarly
 }

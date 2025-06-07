@@ -1,8 +1,12 @@
 {
+  "error.missingUsername": "El nombre de usuario es obligatorio.",
+  "error.missingEmail": "El correo electrónico es obligatorio.",
+  "error.missingPassword": "La contraseña es obligatoria.",
+
   "error.usernameTaken": "El nombre de usuario ya está en uso.",
   "error.emailTaken": "El correo electrónico ya está registrado.",
-  "success.userRegistered": "Usuario registrado con éxito.",
-  "error.invalidCredentials": "Nombre de usuario o contraseña inválidos.",
+  "success.userRegistered": "Usuario registrado exitosamente.",
+  "error.invalidCredentials": "Nombre de usuario o contraseña incorrectos.",
   "info.messageReceived": "Mensaje recibido.",
-  "error.errorOccurred": "Ocurrió un error. Por favor, inténtalo de nuevo más tarde."
+  "error.general": "Ocurrió un error. Por favor, intenta nuevamente más tarde."
 }
