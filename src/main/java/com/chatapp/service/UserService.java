@@ -5,12 +5,16 @@ import com.chatapp.exception.UserExceptions;
 import com.chatapp.model.User;
 import com.chatapp.repository.UserRepository;
 import com.chatapp.util.JwtUtil;
+import com.chatapp.util.TranslationService;
 import com.chatapp.service.RedisService;
+import com.chatapp.util.EmailTemplateHelper;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
+
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -32,10 +36,17 @@ public class UserService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private TranslationService translationService;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+
+    @Value("${app.base-url}")
+    private String baseUrl;
+
     @Transactional
-    public User registerUser(String username, String email, String password) {
+    public User registerUser(String username, String email, String password, String lang) {
         // Check if user already exists
         if (userRepository.findByUsername(username).isPresent()) {
             throw new UserExceptions.UsernameTakenException();
@@ -57,12 +68,15 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-       String verificationLink = "http://localhost:8080/api/users/verify-email?token=" + verificationToken;
+       String verificationLink = baseUrl + "/api/users/verify-email?token=" + verificationToken;
+
+        String subject = EmailTemplateHelper.getVerificationEmailSubject(lang, translationService);
+        Map<String, Object> content = EmailTemplateHelper.buildVerificationEmailContent(user, verificationLink, lang, translationService);
        emailService.sendHtmlEmail(
         user.getEmail(),
-        "Verify your Email",
+        subject,
         "verification-email-template",  // The template name
-        Map.of("username", user.getUsername(), "verificationLink", verificationLink)  // Pass dynamic variables to the template
+        content // Pass dynamic variables to the template
 );
 
     // Return the saved user

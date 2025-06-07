@@ -6,6 +6,13 @@
   "error.emailTaken": "El correo electrónico ya está registrado.",
 
   "success.userRegisteredWithEmail": "Usuario registrado correctamente. Se ha enviado un correo electrónico de confirmación.",
+
+  "email.verify.subject": "Verifica tu correo electrónico",
+  "email.verify.greeting": "Hola, {username}!",
+  "email.verify.instruction": "Gracias por registrarte con nosotros. Para completar el proceso, por favor verifica tu correo haciendo clic en el botón a continuación:",
+  "email.verify.button": "Verifica tu correo",
+  "email.verify.footerNote": "Si no creaste una cuenta, ignora este correo.",
+
   "error.invalidCredentials": "Nombre de usuario o contraseña incorrectos.",
   "info.messageReceived": "Mensaje recibido.",
   "error.general": "Ocurrió un error. Por favor, intenta nuevamente más tarde."

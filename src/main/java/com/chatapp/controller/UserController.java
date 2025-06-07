@@ -35,7 +35,7 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@RequestBody User user, @RequestHeader(value = "Accept-Language", defaultValue = "en") String lang) {
             UserValidators.RegisterValidator.validate(user);
-            User registeredUser = userService.registerUser(user.getUsername(), user.getEmail(), user.getPassword());
+            User registeredUser = userService.registerUser(user.getUsername(), user.getEmail(), user.getPassword(), lang);
             String message = translationService.getTranslation(lang, "success.userRegisteredWithEmail");
 
             return ResponseEntity.ok(Map.of("message", message));

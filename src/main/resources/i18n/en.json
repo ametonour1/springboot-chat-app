@@ -7,6 +7,13 @@
   "error.invalidCredentials": "Invalid username or password.",
 
   "success.userRegisteredWithEmail": "User registered successfully. A confirmation email has been sent.",
+
+  "email.verify.subject": "Verify your Email",
+  "email.verify.greeting": "Hello, {username}!",
+  "email.verify.instruction": "Thank you for registering with us. To complete the registration process, please verify your email address by clicking the button below:",
+  "email.verify.button": "Verify Your Email",
+  "email.verify.footerNote": "If you did not create an account, please ignore this email.",
+
   "info.messageReceived": "Message received.",
   "error.general": "An error occurred. Please try again later."
 }
