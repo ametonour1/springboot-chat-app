@@ -3,6 +3,8 @@ package com.chatapp.controller;
 import com.chatapp.model.User;
 import com.chatapp.service.UserService;
 import com.chatapp.validation.UserValidators;
+import com.chatapp.util.TranslationService;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,13 +24,21 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+    private final TranslationService translationService;
+
+    public UserController(UserService userService, TranslationService translationService) {
+        this.userService = userService;
+        this.translationService = translationService;
+    }
 
     // Register a new user
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody User user) {
+    public ResponseEntity<Map<String, String>> register(@RequestBody User user, @RequestHeader(value = "Accept-Language", defaultValue = "en") String lang) {
             UserValidators.RegisterValidator.validate(user);
             User registeredUser = userService.registerUser(user.getUsername(), user.getEmail(), user.getPassword());
-            return ResponseEntity.ok("User registered successfully: " + registeredUser.getUsername());
+            String message = translationService.getTranslation(lang, "success.userRegisteredWithEmail");
+
+            return ResponseEntity.ok(Map.of("message", message));
   
     }
 

@@ -2,10 +2,10 @@
   "error.missingUsername": "El nombre de usuario es obligatorio.",
   "error.missingEmail": "El correo electrónico es obligatorio.",
   "error.missingPassword": "La contraseña es obligatoria.",
-
   "error.usernameTaken": "El nombre de usuario ya está en uso.",
   "error.emailTaken": "El correo electrónico ya está registrado.",
-  "success.userRegistered": "Usuario registrado exitosamente.",
+
+  "success.userRegisteredWithEmail": "Usuario registrado correctamente. Se ha enviado un correo electrónico de confirmación.",
   "error.invalidCredentials": "Nombre de usuario o contraseña incorrectos.",
   "info.messageReceived": "Mensaje recibido.",
   "error.general": "Ocurrió un error. Por favor, intenta nuevamente más tarde."
