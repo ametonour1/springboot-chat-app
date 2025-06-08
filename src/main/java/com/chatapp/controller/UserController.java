@@ -11,16 +11,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
+
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Map;
 import com.chatapp.dto.LoginRequest;
+import com.chatapp.exception.UserExceptions.InvalidVerificationTokenException;
 
 
 
 @RestController
 @RequestMapping("/api/users")  // Base URL for User endpoints
 public class UserController {
+
+    @Value("${app.frontend-base-url}")
+    private String frontendBaseUrl;
 
     @Autowired
     private UserService userService;
@@ -74,13 +81,19 @@ public class UserController {
         return userService.checkUserOnlineStatus(userId);
     }
 
-    @PostMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+    @GetMapping("/verify-email")
+    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token, @RequestParam(value = "lang", defaultValue = "en") String lang) {
     try {
         userService.verifyEmail(token); // Call the service to verify the token
-        return ResponseEntity.ok("Email verified successfully.");
-    } catch (RuntimeException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+       String redirectUrl = frontendBaseUrl + "/verify-success?lang=" + lang;
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(redirectUrl))
+                .build();
+    } catch (InvalidVerificationTokenException e) {
+          String redirectUrl = frontendBaseUrl + "/verify-failed?lang=" + lang;
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(redirectUrl))
+                .build();
     }
 }
 

@@ -39,6 +39,14 @@ public class UserExceptions {
         }
     }
 
+     public static class InvalidVerificationTokenException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "error.invalidToken";
+        }
+    }
+
+
 
     // Add other user exceptions here similarly
 }

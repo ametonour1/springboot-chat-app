@@ -68,7 +68,7 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-       String verificationLink = baseUrl + "/api/users/verify-email?token=" + verificationToken;
+       String verificationLink = baseUrl + "/api/users/verify-email?token=" + verificationToken + "&lang=" + lang;;
 
         String subject = EmailTemplateHelper.getVerificationEmailSubject(lang, translationService);
         Map<String, Object> content = EmailTemplateHelper.buildVerificationEmailContent(user, verificationLink, lang, translationService);
@@ -144,11 +144,11 @@ public class UserService {
 
     public void verifyEmail(String token) {
         User user = userRepository.findByResetToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> new UserExceptions.InvalidVerificationTokenException());
     
         // Check if the token has expired or is already used
         if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Verification token has expired.");
+            throw new UserExceptions.InvalidVerificationTokenException();
         }
     
         // Mark the user as verified
