@@ -18,6 +18,7 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Map;
 import com.chatapp.dto.LoginRequest;
+import com.chatapp.exception.UserExceptions;
 import com.chatapp.exception.UserExceptions.InvalidVerificationTokenException;
 
 
@@ -96,6 +97,18 @@ public class UserController {
                 .build();
     }
 }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@RequestParam("email") String email,
+                                                @RequestParam(value = "lang", defaultValue = "en") String lang) {
+      
+        userService.resendVerificationEmail(email, lang);
+        String message = translationService.getTranslation(lang, "user.verification.emailSent");
+
+        return ResponseEntity.ok(Map.of("message", message));
+
+
+    }
 
     @PostMapping("/request-password-reset")
     public ResponseEntity<String> requestPasswordReset(@RequestParam String email) {

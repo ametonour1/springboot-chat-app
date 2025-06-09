@@ -13,6 +13,10 @@
   "email.verify.button": "Επιβεβαίωση Email",
   "email.verify.footerNote": "Εάν δεν δημιουργήσατε λογαριασμό, παρακαλούμε αγνοήστε αυτό το email.",
 
+  "user.verification.emailSent": "Το email επιβεβαίωσης στάλθηκε.",
+  "user.error.notFound": "Ο χρήστης δεν βρέθηκε.",
+  "user.error.alreadyVerified": "Αυτό το email έχει ήδη επιβεβαιωθεί.",
+
   "error.invalidCredentials": "Λανθασμένο όνομα χρήστη ή κωδικός.",
   "info.messageReceived": "Το μήνυμα ελήφθη.",
   "error.general": "Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά αργότερα."
