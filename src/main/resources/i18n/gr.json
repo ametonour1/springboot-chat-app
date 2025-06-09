@@ -1,8 +1,19 @@
 {
-  "USERNAME_TAKEN": "Το όνομα χρήστη χρησιμοποιείται ήδη.",
-  "EMAIL_TAKEN": "Το email έχει ήδη καταχωρηθεί.",
-  "USER_REGISTERED": "Ο χρήστης καταχωρήθηκε με επιτυχία.",
-  "INVALID_CREDENTIALS": "Λανθασμένο όνομα χρήστη ή κωδικός.",
-  "MESSAGE_RECEIVED": "Το μήνυμα ελήφθη.",
-  "ERROR_OCCURRED": "Παρουσιάστηκε σφάλμα. Παρακαλώ δοκιμάστε ξανά αργότερα."
+  "error.missingUsername": "Το όνομα χρήστη είναι υποχρεωτικό.",
+  "error.missingEmail": "Το email είναι υποχρεωτικό.",
+  "error.missingPassword": "Ο κωδικός πρόσβασης είναι υποχρεωτικός.",
+  "error.usernameTaken": "Το όνομα χρήστη χρησιμοποιείται ήδη.",
+  "error.emailTaken": "Το email χρησιμοποιείται ήδη.",
+
+  "success.userRegisteredWithEmail": "Ο χρήστης εγγράφηκε με επιτυχία. Ένα email επιβεβαίωσης στάλθηκε.",
+
+  "email.verify.subject": "Επιβεβαιώστε το email σας",
+  "email.verify.greeting": "Γειά σου, {username}!",
+  "email.verify.instruction": "Ευχαριστούμε που εγγραφήκατε. Για να ολοκληρώσετε τη διαδικασία, επιβεβαιώστε το email σας πατώντας το παρακάτω κουμπί:",
+  "email.verify.button": "Επιβεβαίωση Email",
+  "email.verify.footerNote": "Εάν δεν δημιουργήσατε λογαριασμό, παρακαλούμε αγνοήστε αυτό το email.",
+
+  "error.invalidCredentials": "Λανθασμένο όνομα χρήστη ή κωδικός.",
+  "info.messageReceived": "Το μήνυμα ελήφθη.",
+  "error.general": "Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά αργότερα."
 }

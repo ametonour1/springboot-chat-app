@@ -60,12 +60,14 @@
 </head>
 <body>
     <div class="email-container">
-        <h1>Hello, <span th:text="${username}">User</span>!</h1>
-        <p>Thank you for registering with us. To complete the registration process, please verify your email address by clicking the button below:</p>
-        <a href="#" th:href="${verificationLink}" class="verify-link">Verify Your Email</a>
-        <footer>
-            <p>If you did not create an account, please ignore this email.</p>
-        </footer>
-    </div>
+    <h1><span th:text="${greeting}">Hello, User!</span></h1>
+    <p th:text="${instruction}">
+        Thank you for registering with us. To complete the registration process, please verify your email address by clicking the button below:
+    </p>
+    <a th:href="${verificationLink}" class="verify-link" th:text="${buttonText}">Verify Your Email</a>
+    <footer>
+        <p th:text="${footerNote}">If you did not create an account, please ignore this email.</p>
+    </footer>
+</div>
 </body>
 </html>

@@ -2,15 +2,23 @@ package com.chatapp.controller;
 
 import com.chatapp.model.User;
 import com.chatapp.service.UserService;
+import com.chatapp.validation.UserValidators;
+import com.chatapp.util.TranslationService;
+
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
+
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Map;
 import com.chatapp.dto.LoginRequest;
+import com.chatapp.exception.UserExceptions.InvalidVerificationTokenException;
 
 
 
@@ -18,18 +26,27 @@ import com.chatapp.dto.LoginRequest;
 @RequestMapping("/api/users")  // Base URL for User endpoints
 public class UserController {
 
+    @Value("${app.frontend-base-url}")
+    private String frontendBaseUrl;
+
     @Autowired
     private UserService userService;
+    private final TranslationService translationService;
+
+    public UserController(UserService userService, TranslationService translationService) {
+        this.userService = userService;
+        this.translationService = translationService;
+    }
 
     // Register a new user
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody User user) {
-        try {
-            User registeredUser = userService.registerUser(user.getUsername(), user.getEmail(), user.getPassword());
-            return ResponseEntity.ok("User registered successfully: " + registeredUser.getUsername());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error registering user: " + e.getMessage());
-        }
+    public ResponseEntity<Map<String, String>> register(@RequestBody User user, @RequestHeader(value = "Accept-Language", defaultValue = "en") String lang) {
+            UserValidators.RegisterValidator.validate(user);
+            User registeredUser = userService.registerUser(user.getUsername(), user.getEmail(), user.getPassword(), lang);
+            String message = translationService.getTranslation(lang, "success.userRegisteredWithEmail");
+
+            return ResponseEntity.ok(Map.of("message", message));
+  
     }
 
     @PostMapping("/login")
@@ -64,13 +81,19 @@ public class UserController {
         return userService.checkUserOnlineStatus(userId);
     }
 
-    @PostMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+    @GetMapping("/verify-email")
+    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token, @RequestParam(value = "lang", defaultValue = "en") String lang) {
     try {
         userService.verifyEmail(token); // Call the service to verify the token
-        return ResponseEntity.ok("Email verified successfully.");
-    } catch (RuntimeException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+       String redirectUrl = frontendBaseUrl + "/verify-success?lang=" + lang;
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(redirectUrl))
+                .build();
+    } catch (InvalidVerificationTokenException e) {
+          String redirectUrl = frontendBaseUrl + "/verify-failed?lang=" + lang;
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(redirectUrl))
+                .build();
     }
 }
 

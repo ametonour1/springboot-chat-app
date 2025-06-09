@@ -1,8 +1,19 @@
 {
-  "USERNAME_TAKEN": "Username already taken.",
-  "EMAIL_TAKEN": "Email is already registered.",
-  "USER_REGISTERED": "User registered successfully.",
-  "INVALID_CREDENTIALS": "Invalid username or password.",
-  "MESSAGE_RECEIVED": "Message received.",
-  "ERROR_OCCURRED": "An error occurred. Please try again later."
+  "error.missingUsername": "Username is required.",
+  "error.missingEmail": "Email is required.",
+  "error.missingPassword": "Password is required.",
+  "error.usernameTaken": "Username already taken.",
+  "error.emailTaken": "Email is already registered.",
+  "error.invalidCredentials": "Invalid username or password.",
+
+  "success.userRegisteredWithEmail": "User registered successfully. A confirmation email has been sent.",
+
+  "email.verify.subject": "Verify your Email",
+  "email.verify.greeting": "Hello, {username}!",
+  "email.verify.instruction": "Thank you for registering with us. To complete the registration process, please verify your email address by clicking the button below:",
+  "email.verify.button": "Verify Your Email",
+  "email.verify.footerNote": "If you did not create an account, please ignore this email.",
+
+  "info.messageReceived": "Message received.",
+  "error.general": "An error occurred. Please try again later."
 }
