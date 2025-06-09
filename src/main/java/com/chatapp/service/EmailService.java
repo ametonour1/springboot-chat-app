@@ -13,6 +13,7 @@ import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.spring5.SpringTemplateEngine;
 import org.thymeleaf.context.Context;
+import org.springframework.scheduling.annotation.Async;
 
 @Service
 public class EmailService {
@@ -38,7 +39,7 @@ public class EmailService {
             e.printStackTrace(); // You can handle the exception however you like
         }
     }
-
+    @Async
     public void sendHtmlEmail(String to, String subject, String templateName, Map<String, Object> templateVariables) {
         MimeMessage mimeMessage = javaMailSender.createMimeMessage();
     

@@ -34,7 +34,7 @@ public ResponseEntity<Map<String, String>> handleLocalizedException(
     return ResponseEntity
             .status(HttpStatus.CONFLICT)
             .body(Map.of(
-                    "error", translated,
+                    "message", translated,
                     "key", ex.getMessageKey()
             ));
 }
