@@ -62,6 +62,27 @@ public class UserExceptions {
     }
 
 
+    public static class InvalidCredentialsException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "user.error.invalidCredentials";
+        }
+    }
+
+    public static class EmailNotVerifiedException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "user.error.emailNotVerified";
+        }
+    }
+
+    public static class EmailVerificationExpiredException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "user.error.verificationExpired";
+        }
+    }
+
 
     // Add other user exceptions here similarly
 }

@@ -19,5 +19,8 @@
   "user.error.alreadyVerified": "This email is already verified.",
 
   "info.messageReceived": "Message received.",
-  "error.general": "An error occurred. Please try again later."
+  "error.general": "An error occurred. Please try again later.",
+  "user.error.invalidCredentials": "Invalid email or password.",
+  "user.error.emailNotVerified": "Please verify your email before logging in.",
+  "user.error.verificationExpired": "Your email verification link has expired. Please request a new one."
 }

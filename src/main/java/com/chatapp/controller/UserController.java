@@ -18,6 +18,7 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Map;
 import com.chatapp.dto.LoginRequest;
+import com.chatapp.dto.LoginResponseDTO;
 import com.chatapp.exception.UserExceptions;
 import com.chatapp.exception.UserExceptions.InvalidVerificationTokenException;
 
@@ -51,23 +52,17 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, @RequestHeader(value = "Accept-Language", defaultValue = "en") String lang) {
+
+            UserValidators.LoginValidator.validate(request);
             // Get user details to include in response
             User user = userService.getUserByEmail(request.getEmail());
     
             // Use existing loginUser method to validate and return token
             String token = userService.loginUser(request.getEmail(), request.getPassword());
     
-            return ResponseEntity.ok(Map.of(
-                "token", token,
-                "userId", user.getId(),
-                "email", user.getEmail(),
-                "username", user.getUsername()
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
-        }
+            return ResponseEntity.ok(new LoginResponseDTO(token, user.getId(), user.getEmail(), user.getUsername()));
+  
     }
     
 

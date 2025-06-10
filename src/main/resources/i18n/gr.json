@@ -19,5 +19,9 @@
 
   "error.invalidCredentials": "Λανθασμένο όνομα χρήστη ή κωδικός.",
   "info.messageReceived": "Το μήνυμα ελήφθη.",
-  "error.general": "Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά αργότερα."
+  "error.general": "Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά αργότερα.",
+
+  "user.error.invalidCredentials": "Μη έγκυρο email ή κωδικός πρόσβασης.",
+  "user.error.emailNotVerified": "Παρακαλώ επαληθεύστε το email σας πριν συνδεθείτε.",
+  "user.error.verificationExpired": "Ο σύνδεσμος επαλήθευσης έχει λήξει. Παρακαλώ ζητήστε έναν νέο."
 }

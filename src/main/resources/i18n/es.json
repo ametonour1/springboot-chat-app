@@ -19,5 +19,9 @@
 
   "error.invalidCredentials": "Nombre de usuario o contraseña incorrectos.",
   "info.messageReceived": "Mensaje recibido.",
-  "error.general": "Ocurrió un error. Por favor, intenta nuevamente más tarde."
+  "error.general": "Ocurrió un error. Por favor, intenta nuevamente más tarde.",
+
+  "user.error.invalidCredentials": "Correo electrónico o contraseña no válidos.",
+  "user.error.emailNotVerified": "Por favor, verifica tu correo electrónico antes de iniciar sesión.",
+  "user.error.verificationExpired": "Tu enlace de verificación ha expirado. Por favor solicita uno nuevo."
 }

@@ -85,10 +85,10 @@ public class UserService {
     
     public String loginUser(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+                .orElseThrow(UserExceptions.InvalidCredentialsException::new);
     
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+            throw new UserExceptions.InvalidCredentialsException();
         }
 
             // Check if the user's email is verified
@@ -97,9 +97,10 @@ public class UserService {
                 if (user.getResetTokenExpiration() != null && user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
                     // Token has expired, trigger a function to resend verification email
                     //resendVerificationEmail(user);
+                    throw new UserExceptions.EmailVerificationExpiredException();
                 } else {
                     // Token has not expired, return a message to the user
-                    throw new RuntimeException("Please verify your email before logging in.");
+                    throw new UserExceptions.EmailNotVerifiedException();
                 }
         }
     
