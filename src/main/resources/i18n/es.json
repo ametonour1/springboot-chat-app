@@ -13,6 +13,10 @@
   "email.verify.button": "Verifica tu correo",
   "email.verify.footerNote": "Si no creaste una cuenta, ignora este correo.",
 
+  "user.verification.emailSent": "El correo de verificación ha sido enviado.",
+  "user.error.notFound": "Usuario no encontrado.",
+  "user.error.alreadyVerified": "Este correo electrónico ya ha sido verificado.",
+
   "error.invalidCredentials": "Nombre de usuario o contraseña incorrectos.",
   "info.messageReceived": "Mensaje recibido.",
   "error.general": "Ocurrió un error. Por favor, intenta nuevamente más tarde."

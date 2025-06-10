@@ -96,7 +96,7 @@ public class UserService {
             // Email not verified, check if the verification token has expired
                 if (user.getResetTokenExpiration() != null && user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
                     // Token has expired, trigger a function to resend verification email
-                    resendVerificationEmail(user);
+                    //resendVerificationEmail(user);
                 } else {
                     // Token has not expired, return a message to the user
                     throw new RuntimeException("Please verify your email before logging in.");
@@ -158,28 +158,43 @@ public class UserService {
         userRepository.save(user); // Save the updated user
     }
 
-    public void resendVerificationEmail(User user) {
+    public void resendVerificationEmail(String email, String lang) {
+
+     User user = userRepository.findByEmail(email)
+        .orElseThrow(UserExceptions.UserNotFoundException::new);
+
+    if (user.isVerified()) {
+        throw new UserExceptions.EmailAlreadyVerifiedException();
+    }
+
         // Generate a new verification token
-        String newVerificationToken = UUID.randomUUID().toString();
-    
-        // Set the expiration time (e.g., 24 hours from now)
-        LocalDateTime newExpirationTime = LocalDateTime.now().plusHours(24);
-    
-        // Update the user record with the new token and expiration time
-        user.setResetToken(newVerificationToken);
-        user.setResetTokenExpiration(newExpirationTime);
-    
-        // Save the updated user to the database
+      boolean shouldGenerateNewToken = false;
+
+    if (user.getResetToken() == null || user.getResetTokenExpiration() == null) {
+        shouldGenerateNewToken = true;
+    } else if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
+        shouldGenerateNewToken = true;
+    }
+
+    if (shouldGenerateNewToken) {
+        String newToken = UUID.randomUUID().toString();
+        LocalDateTime newExpiration = LocalDateTime.now().plusMinutes(15);
+        user.setResetToken(newToken);
+        user.setResetTokenExpiration(newExpiration);
         userRepository.save(user);
-    
-        // Send the verification email
-        String verificationLink = "http://localhost:8080/api/users/verify-email?token=" + newVerificationToken;
-        emailService.sendHtmlEmail(
-                user.getEmail(),
-                "Verify Your Email",
-                "verification-email-template",  // The template name
-                Map.of("username", user.getUsername(), "verificationLink", verificationLink)  // Pass dynamic variables to the template
-        );
+    }
+
+    String verificationLink = baseUrl + "/api/users/verify-email?token=" + user.getResetToken() + "&lang=" + lang;
+
+        String subject = EmailTemplateHelper.getVerificationEmailSubject(lang, translationService);
+        Map<String, Object> content = EmailTemplateHelper.buildVerificationEmailContent(user, verificationLink, lang, translationService);
+       emailService.sendHtmlEmail(
+        user.getEmail(),
+        subject,
+        "verification-email-template",  // The template name
+        content // Pass dynamic variables to the template
+);
+
     }
 
     public void requestPasswordReset(String email) {

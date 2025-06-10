@@ -47,6 +47,21 @@ public class UserExceptions {
     }
 
 
+    public static class UserNotFoundException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "user.error.notFound";
+        }
+    }
+
+      public static class EmailAlreadyVerifiedException extends BaseLocalizedException {
+        @Override
+        public String getMessageKey() {
+            return "user.error.alreadyVerified";
+        }
+    }
+
+
 
     // Add other user exceptions here similarly
 }
