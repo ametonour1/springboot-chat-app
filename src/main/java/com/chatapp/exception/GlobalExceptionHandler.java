@@ -26,9 +26,17 @@ public ResponseEntity<Map<String, String>> handleLocalizedException(
         BaseLocalizedException ex,
         HttpServletRequest request
 ) {
-    String lang = request.getHeader("Accept-Language");
+      String lang = request.getHeader("X-Language");
+
     if (lang == null || lang.isBlank()) {
-        lang = "en"; // default language
+        // Try Accept-Language header
+        String acceptLang = request.getHeader("Accept-Language");
+        if (acceptLang != null && !acceptLang.isBlank()) {
+            // Extract the first language code (e.g., "en-US,en;q=0.9" → "en")
+            lang = acceptLang.split(",")[0].split("-")[0];
+        } else {
+            lang = "en"; // fallback default
+        }
     }
     String translated = translationService.getTranslation(lang, ex.getMessageKey());
     return ResponseEntity
