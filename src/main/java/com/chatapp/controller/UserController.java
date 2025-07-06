@@ -106,14 +106,12 @@ public class UserController {
     }
 
     @PostMapping("/request-password-reset")
-    public ResponseEntity<String> requestPasswordReset(@RequestParam String email) {
-        try {
-            userService.requestPasswordReset(email);
-            return ResponseEntity.ok("Password reset email sent successfully.");
-        } catch (RuntimeException e) {
-            // If user not found or any other error occurs
-            return ResponseEntity.status(400).body("Error: " + e.getMessage());
-        }
+    public ResponseEntity<?> requestPasswordReset(@RequestParam String email ,  @RequestHeader(value = "X-Language", defaultValue = "en") String lang) {
+            userService.requestPasswordReset(email,lang);
+             String message = translationService.getTranslation(lang, "success.userPasswordResetRequest");
+
+            return ResponseEntity.ok(Map.of("message", message));
+  
     }
 
     @GetMapping("/reset-password")
@@ -139,13 +137,12 @@ public class UserController {
 
     @PostMapping("/update-password")
     public ResponseEntity<?> updatePassword(@RequestParam("token") String token,
-                                            @RequestParam("newPassword") String newPassword) {
-        try {
+                                            @RequestParam("newPassword") String newPassword,
+                                            @RequestHeader(value = "X-Language", defaultValue = "en") String lang) {
+                                                
             userService.resetPassword(token, newPassword);
-            return ResponseEntity.ok(Map.of("message", "Password has been successfully reset"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+            String message = translationService.getTranslation(lang, "success.userPasswordUpdate");
+            return ResponseEntity.ok(Map.of("message", message));
+
     }
 }
