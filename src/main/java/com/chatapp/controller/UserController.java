@@ -18,6 +18,7 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Map;
 import com.chatapp.dto.LoginRequest;
+import com.chatapp.dto.LoginResponseDTO;
 import com.chatapp.exception.UserExceptions;
 import com.chatapp.exception.UserExceptions.InvalidVerificationTokenException;
 
@@ -41,7 +42,7 @@ public class UserController {
 
     // Register a new user
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody User user, @RequestHeader(value = "Accept-Language", defaultValue = "en") String lang) {
+    public ResponseEntity<Map<String, String>> register(@RequestBody User user, @RequestHeader(value = "X-Language", defaultValue = "en") String lang) {
             UserValidators.RegisterValidator.validate(user);
             User registeredUser = userService.registerUser(user.getUsername(), user.getEmail(), user.getPassword(), lang);
             String message = translationService.getTranslation(lang, "success.userRegisteredWithEmail");
@@ -51,23 +52,17 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, @RequestHeader(value = "X-Language", defaultValue = "en") String lang) {
+
+            UserValidators.LoginValidator.validate(request);
             // Get user details to include in response
             User user = userService.getUserByEmail(request.getEmail());
     
             // Use existing loginUser method to validate and return token
             String token = userService.loginUser(request.getEmail(), request.getPassword());
     
-            return ResponseEntity.ok(Map.of(
-                "token", token,
-                "userId", user.getId(),
-                "email", user.getEmail(),
-                "username", user.getUsername()
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
-        }
+            return ResponseEntity.ok(new LoginResponseDTO(token, user.getId(), user.getEmail(), user.getUsername()));
+  
     }
     
 
@@ -111,14 +106,12 @@ public class UserController {
     }
 
     @PostMapping("/request-password-reset")
-    public ResponseEntity<String> requestPasswordReset(@RequestParam String email) {
-        try {
-            userService.requestPasswordReset(email);
-            return ResponseEntity.ok("Password reset email sent successfully.");
-        } catch (RuntimeException e) {
-            // If user not found or any other error occurs
-            return ResponseEntity.status(400).body("Error: " + e.getMessage());
-        }
+    public ResponseEntity<?> requestPasswordReset(@RequestParam String email ,  @RequestHeader(value = "X-Language", defaultValue = "en") String lang) {
+            userService.requestPasswordReset(email,lang);
+             String message = translationService.getTranslation(lang, "success.userPasswordResetRequest");
+
+            return ResponseEntity.ok(Map.of("message", message));
+  
     }
 
     @GetMapping("/reset-password")
@@ -144,13 +137,12 @@ public class UserController {
 
     @PostMapping("/update-password")
     public ResponseEntity<?> updatePassword(@RequestParam("token") String token,
-                                            @RequestParam("newPassword") String newPassword) {
-        try {
+                                            @RequestParam("newPassword") String newPassword,
+                                            @RequestHeader(value = "X-Language", defaultValue = "en") String lang) {
+                                                
             userService.resetPassword(token, newPassword);
-            return ResponseEntity.ok(Map.of("message", "Password has been successfully reset"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+            String message = translationService.getTranslation(lang, "success.userPasswordUpdate");
+            return ResponseEntity.ok(Map.of("message", message));
+
     }
 }

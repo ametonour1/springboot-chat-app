@@ -45,6 +45,9 @@ public class UserService {
     @Value("${app.base-url}")
     private String baseUrl;
 
+    @Value("${app.frontend-base-url}")
+    private String frontBaseUrl;
+
     @Transactional
     public User registerUser(String username, String email, String password, String lang) {
         // Check if user already exists
@@ -85,10 +88,10 @@ public class UserService {
     
     public String loginUser(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+                .orElseThrow(UserExceptions.InvalidCredentialsException::new);
     
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+            throw new UserExceptions.InvalidCredentialsException();
         }
 
             // Check if the user's email is verified
@@ -97,9 +100,10 @@ public class UserService {
                 if (user.getResetTokenExpiration() != null && user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
                     // Token has expired, trigger a function to resend verification email
                     //resendVerificationEmail(user);
+                    throw new UserExceptions.EmailVerificationExpiredException();
                 } else {
                     // Token has not expired, return a message to the user
-                    throw new RuntimeException("Please verify your email before logging in.");
+                    throw new UserExceptions.EmailNotVerifiedException();
                 }
         }
     
@@ -197,9 +201,9 @@ public class UserService {
 
     }
 
-    public void requestPasswordReset(String email) {
+    public void requestPasswordReset(String email, String lang) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                .orElseThrow(UserExceptions.UserNotFoundException::new);
     
         // Generate reset token and expiration
         String token = UUID.randomUUID().toString();
@@ -211,14 +215,24 @@ public class UserService {
         userRepository.save(user);
     
         // Prepare the reset password link
-        String resetLink = "http://localhost:3000/api/users/reset-password?token=" + token;
+        String resetLink = frontBaseUrl + "/update-password?token=" + token + "&lang=" + lang;
+
+        String subject = EmailTemplateHelper.getPasswordResetEmailSubject(lang, translationService);
+
+        Map<String, Object> content = EmailTemplateHelper.buildPasswordResetEmailContent(
+            user,
+            resetLink,
+            lang,
+            translationService
+        );
+
     
         // Send the password reset email
         emailService.sendHtmlEmail(
             user.getEmail(),
-            "Reset Your Password",
+            subject,
             "reset-password-template",  // The template name
-            Map.of("username", user.getUsername(), "resetLink", resetLink)  // Pass dynamic variables to the template
+            content  // Pass dynamic variables to the template
     );
     }
 
@@ -231,11 +245,11 @@ public class UserService {
     public void resetPassword(String token, String newPassword) {
         // Find the user by reset token
         User user = userRepository.findByResetToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
+                .orElseThrow(() -> new UserExceptions.InvalidVerificationTokenException());
         
         // Check if the token has expired
         if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Reset token has expired");
+            throw new  UserExceptions.InvalidVerificationTokenException();
         }
         String encryptedPassword = passwordEncoder.encode(newPassword);
         

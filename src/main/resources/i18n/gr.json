@@ -4,8 +4,11 @@
   "error.missingPassword": "Ο κωδικός πρόσβασης είναι υποχρεωτικός.",
   "error.usernameTaken": "Το όνομα χρήστη χρησιμοποιείται ήδη.",
   "error.emailTaken": "Το email χρησιμοποιείται ήδη.",
+  "error.invalidToken":"Το διακριτικό επαλήθευσης έχει λήξει, παρακαλώ ζητήστε ένα νέο.",
 
   "success.userRegisteredWithEmail": "Ο χρήστης εγγράφηκε με επιτυχία. Ένα email επιβεβαίωσης στάλθηκε.",
+    "success.userPasswordUpdate": "Ο κωδικός χρήστη ενημερώθηκε",
+  "success.userPasswordResetRequest": "Το email επαναφοράς κωδικού στάλθηκε",
 
   "email.verify.subject": "Επιβεβαιώστε το email σας",
   "email.verify.greeting": "Γειά σου, {username}!",
@@ -13,11 +16,21 @@
   "email.verify.button": "Επιβεβαίωση Email",
   "email.verify.footerNote": "Εάν δεν δημιουργήσατε λογαριασμό, παρακαλούμε αγνοήστε αυτό το email.",
 
+  "email.reset.subject": "Επαναφορά Κωδικού Πρόσβασης",
+  "email.reset.greeting": "Γεια σου, {username}",
+  "email.reset.instruction": "Λάβαμε ένα αίτημα για επαναφορά του κωδικού σας. Κάντε κλικ στο κουμπί παρακάτω:",
+  "email.reset.button": "Επαναφορά Κωδικού",
+  "email.reset.footerNote": "© 2025 Η Εταιρεία σας. Όλα τα δικαιώματα διατηρούνται.",
+
   "user.verification.emailSent": "Το email επιβεβαίωσης στάλθηκε.",
   "user.error.notFound": "Ο χρήστης δεν βρέθηκε.",
   "user.error.alreadyVerified": "Αυτό το email έχει ήδη επιβεβαιωθεί.",
 
   "error.invalidCredentials": "Λανθασμένο όνομα χρήστη ή κωδικός.",
   "info.messageReceived": "Το μήνυμα ελήφθη.",
-  "error.general": "Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά αργότερα."
+  "error.general": "Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά αργότερα.",
+
+  "user.error.invalidCredentials": "Μη έγκυρο email ή κωδικός πρόσβασης.",
+  "user.error.emailNotVerified": "Παρακαλώ επαληθεύστε το email σας πριν συνδεθείτε.",
+  "user.error.verificationExpired": "Ο σύνδεσμος επαλήθευσης έχει λήξει. Παρακαλώ ζητήστε έναν νέο."
 }
