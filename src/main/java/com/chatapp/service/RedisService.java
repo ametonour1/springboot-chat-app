@@ -13,6 +13,7 @@ public class RedisService {
     private StringRedisTemplate redisTemplate;
 
     private static final String ONLINE_STATUS_KEY = "user:online:";
+    private static final String USER_SOCKET_KEY = "user:socket:";
 
     // Mark user as online in Redis
     public void markUserOnline(String userId) {
@@ -32,5 +33,18 @@ public class RedisService {
     // Optional: Set user session expiry time in Redis
     public void setUserSessionExpiry(String userId, long minutes) {
         redisTemplate.expire(ONLINE_STATUS_KEY + userId, minutes, TimeUnit.MINUTES);
+    }
+
+
+    public void storeUserSocketSession(String userId, String sessionId) {
+        redisTemplate.opsForValue().set(USER_SOCKET_KEY + userId, sessionId);
+    }
+
+    public String getUserSocketSession(String userId) {
+        return redisTemplate.opsForValue().get(USER_SOCKET_KEY + userId);
+    }
+
+    public void deleteUserSocketSession(String userId) {
+        redisTemplate.delete(USER_SOCKET_KEY + userId);
     }
 }
