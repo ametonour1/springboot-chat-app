@@ -1,5 +1,6 @@
 package com.chatapp.service;
 
+import com.chatapp.dto.UserSearchDto;
 import com.chatapp.exception.UserExceptions;
 
 import com.chatapp.model.User;
@@ -19,7 +20,10 @@ import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.Map;
+import java.util.List;
+
 
 @Service
 public class UserService {
@@ -146,6 +150,15 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
     }
 
+      public String getUserByUsername(String username) {
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        if (optionalUser.isPresent()) {
+             return String.valueOf(optionalUser.get().getId());
+        } else {
+            throw new RuntimeException("User not found with email: " + username);
+        }
+    }
+
     public void verifyEmail(String token) {
         User user = userRepository.findByResetToken(token)
                 .orElseThrow(() -> new UserExceptions.InvalidVerificationTokenException());
@@ -258,6 +271,14 @@ public class UserService {
         user.setResetToken(null); // Clear the reset token
         user.setResetTokenExpiration(null); // Clear the token expiration
         userRepository.save(user); // Save the updated user
+    }
+
+    public List<UserSearchDto> findUsersByUsernamePrefix(String prefix) {
+        List<User> users = userRepository.findTop10ByUsernameStartingWithIgnoreCase(prefix);
+        
+        return users.stream()
+            .map(user -> new UserSearchDto(user.getId(), user.getUsername()))
+            .collect(Collectors.toList());
     }
 
 }

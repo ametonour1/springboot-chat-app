@@ -19,6 +19,6 @@ public class ChatProducer {
     }
 
     public void sendMessage(ChatMessage message) {
-        kafkaTemplate.send(chatTopic, message.getRecipientUsername(), message);
+        kafkaTemplate.send(chatTopic, String.valueOf(message.getRecipientId()), message);
     }
 }
