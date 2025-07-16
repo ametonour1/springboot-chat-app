@@ -1,29 +1,27 @@
 package com.chatapp.dto;
 
-import java.time.LocalDateTime;
-
 public class ChatMessage {
-    private String senderUsername;
-    private String recipientUsername;
+    private Long senderId;
+    private Long recipientId;
     private String content;
     private long timestamp;
 
     // Constructors
     public ChatMessage() {}
-    
-    public ChatMessage(String senderUsername, String recipientUsername, String content, long timestamp) {
-        this.senderUsername = senderUsername;
-        this.recipientUsername = recipientUsername;
+
+    public ChatMessage(Long senderId, Long recipientId, String content, long timestamp) {
+        this.senderId = senderId;
+        this.recipientId = recipientId;
         this.content = content;
         this.timestamp = timestamp;
     }
 
     // Getters and setters
-    public String getSenderUsername() { return senderUsername; }
-    public void setSenderUsername(String senderUsername) { this.senderUsername = senderUsername; }
+    public Long getSenderId() { return senderId; }
+    public void setSenderId(Long senderId) { this.senderId = senderId; }
 
-    public String getRecipientUsername() { return recipientUsername; }
-    public void setRecipientUsername(String recipientUsername) { this.recipientUsername = recipientUsername; }
+    public Long getRecipientId() { return recipientId; }
+    public void setRecipientId(Long recipientId) { this.recipientId = recipientId; }
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
