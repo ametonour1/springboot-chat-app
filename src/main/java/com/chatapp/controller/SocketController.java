@@ -9,6 +9,7 @@ import org.springframework.stereotype.Controller;
 
 import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.SocketHandshakeMessage;
+import com.chatapp.dto.SocketHeartbeatMessage;
 import com.chatapp.service.RedisService;
 import com.chatapp.kafka.ChatProducer;
 
@@ -41,6 +42,11 @@ public class SocketController {
 
     System.out.println("Registered user " + userId + " with session " + sessionId);
 }
+    @MessageMapping("/heartbeat")
+    public void handleHeartbeat(@Payload SocketHeartbeatMessage heartbeat) {
+        redisService.markUserOnline(heartbeat.getUserId()); // Reset TTL
+        System.out.println("Heartbeat received for " + heartbeat.getUserId());
+    }
 
     @MessageMapping("/chat.send")
     public void handleChatMessage(@Payload ChatMessage message, SimpMessageHeaderAccessor headerAccessor) {

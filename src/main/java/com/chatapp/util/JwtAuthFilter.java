@@ -14,6 +14,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.chatapp.security.UserPrincipal;
+
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -34,11 +36,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 Long userId = jwtUtil.extractUserId(token);
                 System.out.println("User ID extracted: " + userId);
 
+                UserPrincipal principal = new UserPrincipal(email, userId);
+
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                        email, null, List.of() // You can add roles here later
+                        principal, null, List.of() // Add roles/authorities here if needed
                 );
 
-                auth.setDetails(userId);
+                // No need to use auth.setDetails(userId) anymore, as userId is inside principal
 
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }

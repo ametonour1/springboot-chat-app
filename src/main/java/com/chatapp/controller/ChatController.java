@@ -10,8 +10,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
 import com.chatapp.dto.ChatMessage;
+import com.chatapp.dto.RecentChatterDto;
 import com.chatapp.dto.UserSearchDto;
 import com.chatapp.kafka.ChatProducer;
+import com.chatapp.security.UserPrincipal;
+import com.chatapp.service.ChatService;
+import com.chatapp.service.RedisService;
 import com.chatapp.service.UserService;
 
 @RestController
@@ -26,10 +30,14 @@ public class ChatController {
 
     private final ChatProducer chatProducer;
     private UserService userService;
+    private RedisService redisService;
+    private ChatService chatService;
 
-    public ChatController(UserService userService,ChatProducer chatProducer) {
+    public ChatController(UserService userService,ChatProducer chatProducer, RedisService redisService, ChatService chatService) {
         this.chatProducer = chatProducer;
         this.userService = userService;
+        this.redisService = redisService;
+        this.chatService = chatService;
     }
 
     @PostMapping("/api/test/public/send")
@@ -43,5 +51,14 @@ public class ChatController {
 
           List<UserSearchDto> results = userService.findUsersByUsernamePrefix(username);
           return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/recent-chats")
+    public ResponseEntity<List<RecentChatterDto>> getRecentUserChats(Authentication authentication) {
+    UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+    Long userId = principal.getUserId();
+    List<RecentChatterDto> recentChatters = chatService.getRecentChattersWithDetails(userId.toString());
+
+    return ResponseEntity.ok(recentChatters);
     }
 }
