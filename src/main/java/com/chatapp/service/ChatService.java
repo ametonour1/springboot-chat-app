@@ -1,6 +1,8 @@
 package com.chatapp.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -66,14 +68,45 @@ public class ChatService {
       redisService.getRecentChatters(userId);
     }
 
-    public List<RecentChatterDto> getRecentChattersWithDetails(String userId) {
-    List<String> chatterIds = redisService.getRecentChatters(userId);
-    List<User> users = userService.getUsersByIds(chatterIds);
+  public List<RecentChatterDto> getRecentChattersWithDetails(String userId) {
+        List<String> chatterIds = redisService.getRecentChatters(userId);
+        List<User> users = userService.getUsersByIds(chatterIds);
 
-    return users.stream()
-        .map(user -> new RecentChatterDto(user.getId().toString(), user.getUsername()))
-        .collect(Collectors.toList());
+        // Map users by ID for quick lookup
+        Map<String, User> userMap = users.stream()
+            .collect(Collectors.toMap(user -> user.getId().toString(), user -> user));
+
+        // Rebuild the list in Redis order
+        return chatterIds.stream()
+            .map(userMap::get) // get user by ID
+            .filter(Objects::nonNull) // skip nulls in case of missing users
+            .map(user -> new RecentChatterDto(user.getId().toString(), user.getUsername()))
+            .collect(Collectors.toList());
 }
+
+    public void emitRecentChatsUpdate(String userId, List<RecentChatterDto> chats) {
+        System.out.println("emitChat" + userId + chats);
+
+         messagingTemplate.convertAndSend("/topic/recent-chats/" + userId, chats);
+    
+    }
+    public void pushRecentChatUpdates(String senderId, String recipientId) {
+        // Update Redis recent chat data
+        updateRecentChats(senderId, recipientId);
+        System.out.println("pushrecentchatupdate" + senderId + recipientId);
+
+        // Push updates to sender if online
+        if (redisService.isUserOnline(senderId)) {
+            List<RecentChatterDto> senderChats = getRecentChattersWithDetails(senderId);
+            emitRecentChatsUpdate(senderId, senderChats);
+        }
+
+        // Push updates to recipient if online
+        if (redisService.isUserOnline(recipientId)) {
+            List<RecentChatterDto> recipientChats = getRecentChattersWithDetails(recipientId);
+            emitRecentChatsUpdate(recipientId, recipientChats);
+        }
+}   
 
    
 }

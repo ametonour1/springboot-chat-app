@@ -1,7 +1,10 @@
 package com.chatapp.kafka;
 
 import com.chatapp.dto.ChatMessage;
+import com.chatapp.dto.RecentChatterDto;
 import com.chatapp.service.ChatService;
+
+import java.util.List;
 
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,10 @@ public class ChatConsumer {
            System.out.println("hello: ");
            chatService.sendMessageToUser(message.getRecipientId().toString(), message);
            chatService.updateRecentChats(message.getSenderId().toString(), message.getRecipientId().toString());
-        // TODO: Emit to WebSocket if online, or store for later
+           chatService.pushRecentChatUpdates(
+                message.getSenderId().toString(),
+                message.getRecipientId().toString()
+            );
+       
     }
 }
