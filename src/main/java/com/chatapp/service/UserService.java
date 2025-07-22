@@ -111,7 +111,7 @@ public class UserService {
                 }
         }
     
-        redisService.markUserOnline(user.getId().toString());
+        //redisService.markUserOnline(user.getId().toString());
         
         return jwtUtil.generateToken(user); // Return JWT
     }
