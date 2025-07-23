@@ -19,6 +19,7 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import com.chatapp.dto.ChatMessage;
+import com.chatapp.dto.UserStatusChangedEvent;
 
 
 
@@ -65,6 +66,44 @@ public class KafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, ChatMessage> kafkaListenerContainerFactory() {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, ChatMessage>();
         factory.setConsumerFactory(consumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ProducerFactory<String, UserStatusChangedEvent> userStatusProducerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
+    // KafkaTemplate for UserStatusChangedEvent
+    @Bean
+    public KafkaTemplate<String, UserStatusChangedEvent> userStatusKafkaTemplate() {
+        return new KafkaTemplate<>(userStatusProducerFactory());
+    }
+
+    @Bean
+public ConsumerFactory<String, UserStatusChangedEvent> userStatusConsumerFactory() {
+    JsonDeserializer<UserStatusChangedEvent> deserializer = new JsonDeserializer<>(UserStatusChangedEvent.class);
+    deserializer.addTrustedPackages("*");
+    return new DefaultKafkaConsumerFactory<>(
+        Map.of(
+            ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
+            ConsumerConfig.GROUP_ID_CONFIG, "status-group",
+            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
+            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class
+        ),
+        new StringDeserializer(),
+        deserializer
+    );
+}
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, UserStatusChangedEvent> userStatusKafkaListenerContainerFactory() {
+        var factory = new ConcurrentKafkaListenerContainerFactory<String, UserStatusChangedEvent>();
+        factory.setConsumerFactory(userStatusConsumerFactory());
         return factory;
     }
 }

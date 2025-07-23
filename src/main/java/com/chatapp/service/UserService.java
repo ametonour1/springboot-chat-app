@@ -111,7 +111,7 @@ public class UserService {
                 }
         }
     
-        redisService.markUserOnline(user.getId().toString());
+        //redisService.markUserOnline(user.getId().toString());
         
         return jwtUtil.generateToken(user); // Return JWT
     }
@@ -145,6 +145,14 @@ public class UserService {
         }
     }
     
+    public List<User> getUsersByIds(List<String> userIds) {
+    List<Long> ids = userIds.stream()
+        .map(Long::parseLong)
+        .collect(Collectors.toList());
+
+    return userRepository.findAllById(ids);
+    }
+
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
