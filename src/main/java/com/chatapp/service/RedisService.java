@@ -21,6 +21,8 @@ public class RedisService {
     private static final String USER_SOCKETS_KEY = "user:sockets:";
     private static final String SOCKET_USER_KEY = "socket:user:";
     private static final String USER_LAST_SEEN_KEY = "user:lastseen:";
+    private static final String CHATTED_WITH_KEY_PREFIX = "recent:chatted:with:";
+
 
 
     // Mark user as online in Redis
@@ -98,15 +100,27 @@ public class RedisService {
     //     redisTemplate.delete(USER_SOCKET_KEY + userId);
     // }
 
+    public void addChattedWith(String targetUserId, String chatterId) {
+    String key = CHATTED_WITH_KEY_PREFIX + targetUserId;
+    redisTemplate.opsForSet().add(key, chatterId);
+    }
+
+    public Set<String> getUsersWhoChattedWith(String userId) {
+        String key = CHATTED_WITH_KEY_PREFIX + userId;
+        return redisTemplate.opsForSet().members(key);
+    }
+
     public void addRecentChatter(String userId, String chatterId) {
 
     String RECENT_CHATTERS_KEY = RECENT_CHATTERS_KEY_PREFIX + userId; 
-        // Remove existing occurrences to avoid duplicates
+
         redisTemplate.opsForList().remove(RECENT_CHATTERS_KEY, 0, chatterId);
-        // Push to front
+       
         redisTemplate.opsForList().leftPush(RECENT_CHATTERS_KEY, chatterId);
-        // Trim list to max 10 entries
+
         redisTemplate.opsForList().trim(RECENT_CHATTERS_KEY, 0, 10);
+
+        addChattedWith(userId, chatterId);
     }
 
     public List<String> getRecentChatters(String userId) {

@@ -14,6 +14,7 @@ public class ChatProducer {
 
     private final KafkaTemplate<String, ChatMessage> kafkaTemplate;
 
+
     public ChatProducer(KafkaTemplate<String, ChatMessage> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
@@ -21,4 +22,5 @@ public class ChatProducer {
     public void sendMessage(ChatMessage message) {
         kafkaTemplate.send(chatTopic, String.valueOf(message.getRecipientId()), message);
     }
+
 }

@@ -80,7 +80,10 @@ public class ChatService {
         return chatterIds.stream()
             .map(userMap::get) // get user by ID
             .filter(Objects::nonNull) // skip nulls in case of missing users
-            .map(user -> new RecentChatterDto(user.getId().toString(), user.getUsername()))
+            .map(user -> {
+            boolean isOnline = redisService.isUserOnline(user.getId().toString());
+            return new RecentChatterDto(user.getId().toString(), user.getUsername(), isOnline);
+            })
             .collect(Collectors.toList());
 }
 

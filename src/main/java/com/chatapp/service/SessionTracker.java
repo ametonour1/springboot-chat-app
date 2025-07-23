@@ -8,23 +8,29 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.chatapp.dto.UserStatusChangedEvent;
+import com.chatapp.dto.UserStatusDto;
 import com.chatapp.model.UserLastSeen;
 import com.chatapp.repository.UserLastSeenRepository;
 import com.chatapp.service.RedisService;
+
 
 @Component
 public class SessionTracker {
 
     private final UserLastSeenRepository repository;
     private final RedisService redisService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public SessionTracker(UserLastSeenRepository repository, RedisService redisService) {
+    public SessionTracker(UserLastSeenRepository repository, RedisService redisService, SimpMessagingTemplate messagingTemplate) {
         this.repository = repository;
         this.redisService = redisService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     public void updateHeartbeat(long userId) {
@@ -64,4 +70,19 @@ public class SessionTracker {
 
         });
     }
+
+   public void emitUserStatus(String userId, boolean isOnline) {
+    Set<String> receivers = redisService.getUsersWhoChattedWith(userId);
+
+    for (String receiverId : receivers) {
+        messagingTemplate.convertAndSend("/topic/status/" + receiverId, new UserStatusDto(userId, isOnline));
+            System.out.println("emiting status to " + receiverId);
+
+        // messagingTemplate.convertAndSendToUser(
+        //     receiverId,
+        //     "/queue/status",
+        //     new UserStatusDto(userId, isOnline)
+        // );
+    }
+}
 }

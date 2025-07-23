@@ -1,5 +1,6 @@
 package com.chatapp.websocket;
 
+import com.chatapp.kafka.UserStatusProducer;
 import com.chatapp.service.RedisService;
 import com.chatapp.service.SessionTracker;
 
@@ -17,10 +18,13 @@ public class WebSocketEventListener {
 
     private final RedisService redisService;
     private final SessionTracker sessionTracker;
+    private final UserStatusProducer userStatusProducer;
 
-    public WebSocketEventListener(RedisService redisService, SessionTracker sessionTracker) {
+    public WebSocketEventListener(RedisService redisService, SessionTracker sessionTracker, UserStatusProducer userStatusProducer) {
         this.redisService = redisService;
         this.sessionTracker = sessionTracker;
+        this.userStatusProducer = userStatusProducer;
+
     }
 
 
@@ -53,6 +57,8 @@ public class WebSocketEventListener {
         if (userId != null) {
             //sessionTracker.storeUserSocketSession(userId, sessionId);
             System.out.println("User connected: " + userId + " with session: " + sessionId);
+            userStatusProducer.broadcastUserStatusChange(userId,true);
+
         }
     }
 
@@ -76,6 +82,7 @@ public class WebSocketEventListener {
 
         if (remainingConnections == 0) {
             redisService.updateUserLastSeen(userId);
+            userStatusProducer.broadcastUserStatusChange(userId,false);
             System.out.println("User " + userId + " fully disconnected and marked offline.");
         } else {
             System.out.println("User " + userId + " disconnected one session, still active on others.");
