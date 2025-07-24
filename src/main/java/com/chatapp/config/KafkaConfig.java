@@ -19,6 +19,7 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import com.chatapp.dto.ChatMessage;
+import com.chatapp.dto.MessageStatusEvent;
 import com.chatapp.dto.UserStatusChangedEvent;
 
 
@@ -104,6 +105,43 @@ public ConsumerFactory<String, UserStatusChangedEvent> userStatusConsumerFactory
     public ConcurrentKafkaListenerContainerFactory<String, UserStatusChangedEvent> userStatusKafkaListenerContainerFactory() {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, UserStatusChangedEvent>();
         factory.setConsumerFactory(userStatusConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ProducerFactory<String, MessageStatusEvent> messageStatusProducerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
+    @Bean
+    public KafkaTemplate<String, MessageStatusEvent> messageStatusKafkaTemplate() {
+        return new KafkaTemplate<>(messageStatusProducerFactory());
+    }
+
+    @Bean
+    public ConsumerFactory<String, MessageStatusEvent> messageStatusConsumerFactory() {
+        JsonDeserializer<MessageStatusEvent> deserializer = new JsonDeserializer<>(MessageStatusEvent.class);
+        deserializer.addTrustedPackages("*");
+        return new DefaultKafkaConsumerFactory<>(
+            Map.of(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
+                ConsumerConfig.GROUP_ID_CONFIG, "message-status-group",
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class
+            ),
+            new StringDeserializer(),
+            deserializer
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, MessageStatusEvent> messageStatusKafkaListenerContainerFactory() {
+        var factory = new ConcurrentKafkaListenerContainerFactory<String, MessageStatusEvent>();
+        factory.setConsumerFactory(messageStatusConsumerFactory());
         return factory;
     }
 }

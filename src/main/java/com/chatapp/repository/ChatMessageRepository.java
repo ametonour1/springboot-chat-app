@@ -22,4 +22,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessageEntity, 
 
     // Optional: Unread messages
     List<ChatMessageEntity> findByRecipientIdAndStatus(Long recipientId, MessageStatus status);
+
+    boolean existsByRecipientIdAndStatusIn(Long recipientId, Iterable<MessageStatus> statuses);
+
+    boolean existsBySenderIdAndRecipientIdAndStatusIn(Long senderId, Long recipientId, Iterable<MessageStatus> statuses);
+
 }

@@ -3,12 +3,16 @@ package com.chatapp.service;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import javax.persistence.EntityNotFoundException;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import com.chatapp.dto.ChatMessage;
+import com.chatapp.dto.MessageStatusEvent;
 import com.chatapp.dto.RecentChatterDto;
 import com.chatapp.model.ChatMessageEntity;
 import com.chatapp.model.MessageStatus;
@@ -35,14 +39,40 @@ public class ChatService {
 
          ChatMessageEntity entity = mapDtoToEntity(message);
 
-         saveMessage(entity);
 
         if (redisService.isUserOnline(userId)) {
-            messagingTemplate.convertAndSend("/topic/messages/" + userId, message);
+            entity.setStatus(MessageStatus.DELIVERED); 
+            message.setStatus(MessageStatus.DELIVERED); 
+            saveMessage(entity);
+
+                ChatMessage msgToRecipient = new ChatMessage(
+                entity.getId(),
+                message.getSenderId(),
+                message.getRecipientId(),
+                message.getContent(),
+                message.getTimestamp(),
+                message.getStatus(),
+                false // not sender
+            );
+            messagingTemplate.convertAndSend("/topic/messages/" + message.getRecipientId().toString(), msgToRecipient);
         } else {
+            saveMessage(entity);
+            message.setStatus(MessageStatus.SENT);
             // handle offline user case here (store message or log)
             System.out.println("User " + userId + " is offline. saved to DB.");
         }
+
+            // Send to sender with me=true
+            ChatMessage msgToSender = new ChatMessage(
+                entity.getId(),
+                message.getSenderId(),
+                message.getRecipientId(),
+                message.getContent(),
+                message.getTimestamp(),
+                message.getStatus(),
+                true // this is sender's own message
+            );
+            messagingTemplate.convertAndSend("/topic/messages/" + message.getSenderId().toString(), msgToSender);
     }
 
     private ChatMessageEntity mapDtoToEntity(ChatMessage dto) {
@@ -82,7 +112,11 @@ public class ChatService {
             .filter(Objects::nonNull) // skip nulls in case of missing users
             .map(user -> {
             boolean isOnline = redisService.isUserOnline(user.getId().toString());
-            return new RecentChatterDto(user.getId().toString(), user.getUsername(), isOnline);
+            boolean hasUnreadMessages = hasUnreadMessagesFrom(
+            user.getId().toString(), // sender
+            userId                   // recipient (you)
+        );;
+            return new RecentChatterDto(user.getId().toString(), user.getUsername(), isOnline , hasUnreadMessages);
             })
             .collect(Collectors.toList());
 }
@@ -111,5 +145,57 @@ public class ChatService {
         }
 }   
 
+    public boolean hasUnreadMessagesFrom(String senderId, String recipientId) {
+    return chatMessageRepository.existsBySenderIdAndRecipientIdAndStatusIn(
+        Long.valueOf(senderId),
+        Long.valueOf(recipientId),
+        List.of(MessageStatus.SENT, MessageStatus.DELIVERED) // assuming DELIVERED still counts as unread
+    );
+}
+
+   public void handleMessageDeliveryStatus( MessageStatusEvent event) {
+         Long recipientId = event.getRecipientId();
+        Long messageId = event.getMessageId();
+        MessageStatus status = event.getStatus();
+        ChatMessageEntity message = chatMessageRepository.findById(messageId)
+            .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        if (!message.getRecipientId().equals(recipientId)) {
+            throw new RuntimeException("Unauthorized to mark this message as delivered");
+        }
+
+        message.setStatus(status);
+        chatMessageRepository.save(message);
+
+        // Notify sender if needed
+        messagingTemplate.convertAndSend(
+            "/topic/message-status/" + message.getSenderId(),
+            Map.of("messageId", message.getId(), "status", status)
+        );
+    }
+
+     public void handleMessageStatusUpdate(MessageStatusEvent event) {
+
+        Long senderId = event.getSenderId();
+        Long messageId = event.getMessageId();
+        MessageStatus status = event.getStatus();
+
+        ChatMessageEntity message = chatMessageRepository.findById(messageId)
+            .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        if (!message.getRecipientId().equals(senderId)) {
+            throw new RuntimeException("Unauthorized to mark this message as read");
+        }
+
+        message.setStatus(status);
+        chatMessageRepository.save(message);
+
+        // Notify sender if needed
+        messagingTemplate.convertAndSend(
+            "/topic/message-status/" + message.getSenderId(),
+            Map.of("messageId", message.getId(), "status", status)
+        );
+    }
+   
    
 }
