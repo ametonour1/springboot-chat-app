@@ -44,8 +44,5 @@ public class ChatConsumer {
        
     }
 
-      @KafkaListener(topics = "user-status-changes", groupId = "status-group")
-     public void consumeStatusChange(UserStatusChangedEvent event) {
-        sessionTracker.emitUserStatus(event.getUserId(), event.isOnline());
-    }
+    
 }
