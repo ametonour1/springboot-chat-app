@@ -1,6 +1,8 @@
 package com.chatapp.controller;
 
 import java.security.Principal;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Header;
@@ -23,6 +25,7 @@ import com.chatapp.service.RedisService;
 import com.chatapp.service.SessionTracker;
 import com.chatapp.kafka.ChatProducer;
 import com.chatapp.kafka.MessageStatusProducer;
+import com.chatapp.model.ChatMessageEntity;
 import com.chatapp.model.MessageStatus;
 
 
@@ -67,8 +70,22 @@ public class SocketController {
         //notifyRecentChattersUserIsOnline(userId);
         System.out.println("USER first connection  " + userId );
         //redisService.markUserOnline(userId);
+       
 
     }
+        Long longUserId = Long.parseLong(userId);
+
+        List<ChatMessageEntity> messages = chatService.markSentMessagesAsDeliveredAndGetLatestPerSender(longUserId);
+
+        System.out.println("Delivered messages for user " + userId + ":");
+        for (ChatMessageEntity msg : messages) {        
+              MessageStatusEvent event = new MessageStatusEvent();
+                event.setSenderId(msg.getSenderId());
+                event.setRecipientId(msg.getRecipientId());
+                event.setStatus(MessageStatus.DELIVERED);
+                event.setMessageId(msg.getId());
+                messageStatusProducer.sendStatusUpdate(event);
+        }
 
     System.out.println("Registered user " + userId + " with session " + sessionId);
 }
@@ -100,7 +117,8 @@ public void handleMarkAsRead(ChatMessageReadDto dto, @Header("simpSessionId") St
     //chatService.markMessageAsRead(dto.getMessageId(), userId);
     MessageStatusEvent event = new MessageStatusEvent();
     event.setMessageId(dto.getMessageId());
-    event.setSenderId(userId);
+    //event.setSenderId(userId);
+    event.setRecipientId(userId);
     event.setStatus(MessageStatus.READ);  // or the string "READ" if you use strings
 
     // Send event to Kafka

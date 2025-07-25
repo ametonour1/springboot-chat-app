@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityNotFoundException;
+import javax.transaction.Transactional;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -152,6 +153,14 @@ public class ChatService {
         List.of(MessageStatus.SENT, MessageStatus.DELIVERED) // assuming DELIVERED still counts as unread
     );
 }
+    @Transactional  
+    public int markMessagesAsRead(Long senderId, Long recipientId) {
+        System.out.println("updateingMessaegs" + senderId + recipientId);
+
+        return chatMessageRepository.bulkUpdateStatusBySenderAndRecipient(senderId, recipientId, MessageStatus.READ);
+        
+    }
+    
 
    public void handleMessageDeliveryStatus( MessageStatusEvent event) {
          Long recipientId = event.getRecipientId();
@@ -173,22 +182,26 @@ public class ChatService {
             Map.of("messageId", message.getId(), "status", status)
         );
     }
+     @Transactional
+     public void handleMessageStatusReadUpdate(MessageStatusEvent event) {
 
-     public void handleMessageStatusUpdate(MessageStatusEvent event) {
-
-        Long senderId = event.getSenderId();
+        //Long senderId = event.getSenderId();
+        long recipientId = event.getRecipientId();
         Long messageId = event.getMessageId();
         MessageStatus status = event.getStatus();
 
         ChatMessageEntity message = chatMessageRepository.findById(messageId)
             .orElseThrow(() -> new RuntimeException("Message not found"));
 
-        if (!message.getRecipientId().equals(senderId)) {
+        if (!message.getRecipientId().equals(recipientId)) {
             throw new RuntimeException("Unauthorized to mark this message as read");
         }
 
-        message.setStatus(status);
-        chatMessageRepository.save(message);
+         message.setStatus(status);
+         Long senderId = message.getSenderId();
+        // chatMessageRepository.save(message);
+        markMessagesAsRead(senderId, recipientId);
+        
 
         // Notify sender if needed
         messagingTemplate.convertAndSend(
@@ -197,5 +210,13 @@ public class ChatService {
         );
     }
    
+    @Transactional
+    public List<ChatMessageEntity> markSentMessagesAsDeliveredAndGetLatestPerSender(Long recipientId) {
+        // Step 1: Bulk update status
+        chatMessageRepository.bulkMarkSentAsDelivered(recipientId);
+
+        // Step 2: Get latest delivered message per sender
+        return chatMessageRepository.findLatestDeliveredMessagesPerSender(recipientId);
+    }
    
 }

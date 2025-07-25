@@ -24,7 +24,7 @@ public class MessageStatusListener {
     )
     public void listen(MessageStatusEvent event) {
            if (event.getStatus() == MessageStatus.READ) {
-                chatService.handleMessageStatusUpdate(event);
+                chatService.handleMessageStatusReadUpdate(event);
     } else if (event.getStatus() == MessageStatus.DELIVERED) {
         chatService.handleMessageDeliveryStatus(event);
     } else {
