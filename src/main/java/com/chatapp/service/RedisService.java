@@ -1,10 +1,19 @@
 package com.chatapp.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+
+import com.chatapp.model.ChatMessageEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -22,6 +31,14 @@ public class RedisService {
     private static final String SOCKET_USER_KEY = "socket:user:";
     private static final String USER_LAST_SEEN_KEY = "user:lastseen:";
     private static final String CHATTED_WITH_KEY_PREFIX = "recent:chatted:with:";
+
+
+    private final ObjectMapper objectMapper = new ObjectMapper()
+      .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+      .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    private static final int MAX_MESSAGES = 10;
+    private static final int TTL_SECONDS = 86400; // 24 hours
 
 
 
@@ -128,6 +145,71 @@ public class RedisService {
         String RECENT_CHATTERS_KEY = RECENT_CHATTERS_KEY_PREFIX + userId; 
         // Get all recent chatters
         return redisTemplate.opsForList().range(RECENT_CHATTERS_KEY, 0, -1);
+    }
+
+    public String getChatKey(Long userId1, Long userId2) {
+    Long low = Math.min(userId1, userId2);
+    Long high = Math.max(userId1, userId2);
+    return "chat:messages:" + low + ":" + high;
+    }
+
+
+    public void addMessageToCache(Long senderId, Long recipientId, ChatMessageEntity message) {
+        try {
+            String key = getChatKey(senderId, recipientId);
+            String jsonMessage = objectMapper.writeValueAsString(message);
+
+            redisTemplate.opsForList().leftPush(key, jsonMessage);  // lpush
+            redisTemplate.opsForList().trim(key, 0, MAX_MESSAGES - 1);  // ltrim
+            redisTemplate.expire(key, Duration.ofSeconds(TTL_SECONDS));  
+
+        } catch (Exception e) {
+            // handle serialization error or redis error here
+            e.printStackTrace();
+        }
+    }
+
+    public List<ChatMessageEntity> getCachedMessages(Long userId1, Long userId2) {
+    try {
+        String key = getChatKey(userId1, userId2);
+        List<String> cachedJsonMessages = redisTemplate.opsForList().range(key, 0, MAX_MESSAGES - 1);
+
+        List<ChatMessageEntity> messages = new ArrayList<>();
+
+        for (String json : cachedJsonMessages) {
+            ChatMessageEntity message = objectMapper.readValue(json, ChatMessageEntity.class);
+            messages.add(message);
+        }
+
+        // Optionally reverse list if you want oldest first instead of newest first
+        Collections.reverse(messages);
+
+        return messages;
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        return Collections.emptyList();
+    }
+}
+
+   public void updateCachedMessageStatus(ChatMessageEntity updatedMessage) {
+        try {
+            String cacheKey = getChatKey(updatedMessage.getSenderId(), updatedMessage.getRecipientId());
+            List<String> cachedMessages = redisTemplate.opsForList().range(cacheKey, 0, -1);
+            if (cachedMessages == null) return;
+
+            for (int i = 0; i < cachedMessages.size(); i++) {
+                ChatMessageEntity cachedMsg = objectMapper.readValue(cachedMessages.get(i), ChatMessageEntity.class);
+                if (cachedMsg.getId().equals(updatedMessage.getId())) {
+                    String updatedJson = objectMapper.writeValueAsString(updatedMessage);
+                    redisTemplate.opsForList().set(cacheKey, i, updatedJson);
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            // You can log the error here for debugging
+            e.printStackTrace();
+        }
     }
 
 }

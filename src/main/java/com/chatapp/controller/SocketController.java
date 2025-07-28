@@ -14,7 +14,7 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.messaging.Message;
 
-
+import com.chatapp.dto.CachedMessagesRequest;
 import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.ChatMessageReadDto;
 import com.chatapp.dto.MessageStatusEvent;
@@ -125,5 +125,17 @@ public void handleMarkAsRead(ChatMessageReadDto dto, @Header("simpSessionId") St
     messageStatusProducer.sendStatusUpdate(event);
 }
 
+
+   @MessageMapping("/get-cached-messages")
+    public void getCachedMessages(@Payload CachedMessagesRequest request) {
+        Long senderId = request.getSenderId();
+        Long recipientId = request.getRecipientId();
+
+        List<ChatMessageEntity> cachedMessages = redisService.getCachedMessages(senderId, recipientId);
+
+        // Send messages back to the requesting user
+        String destination = "/topic/cached-messages/" + senderId;
+        messagingTemplate.convertAndSend(destination, cachedMessages);
+    }
  
 }

@@ -74,6 +74,8 @@ public class ChatService {
                 true // this is sender's own message
             );
             messagingTemplate.convertAndSend("/topic/messages/" + message.getSenderId().toString(), msgToSender);
+
+            redisService.addMessageToCache(entity.getSenderId(),entity.getRecipientId(),entity);
     }
 
     private ChatMessageEntity mapDtoToEntity(ChatMessage dto) {
@@ -155,6 +157,13 @@ public class ChatService {
 }
     @Transactional  
     public int markMessagesAsRead(Long senderId, Long recipientId) {
+         int count = chatMessageRepository.countUnreadMessages(senderId, recipientId, MessageStatus.READ);
+        if (count == 0) {
+            System.out.println("retuning no messes to update for" + senderId + recipientId);
+
+            return 0; // Nothing to do
+        }
+
         System.out.println("updateingMessaegs" + senderId + recipientId);
 
         return chatMessageRepository.bulkUpdateStatusBySenderAndRecipient(senderId, recipientId, MessageStatus.READ);
@@ -174,6 +183,7 @@ public class ChatService {
         }
 
         message.setStatus(status);
+        redisService.updateCachedMessageStatus(message);
         chatMessageRepository.save(message);
 
         // Notify sender if needed
@@ -200,6 +210,7 @@ public class ChatService {
          message.setStatus(status);
          Long senderId = message.getSenderId();
         // chatMessageRepository.save(message);
+        redisService.updateCachedMessageStatus(message);
         markMessagesAsRead(senderId, recipientId);
         
 

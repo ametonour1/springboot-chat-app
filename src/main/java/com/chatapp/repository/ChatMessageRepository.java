@@ -64,5 +64,10 @@ List<ChatMessageEntity> findLatestDeliveredMessagesPerSender(@Param("recipientId
 int bulkUpdateStatusBySenderAndRecipient(@Param("senderId") Long senderId, 
                                         @Param("recipientId") Long recipientId,
                                         @Param("status") MessageStatus status);
+ 
+         
                                         
+                                        
+@Query("SELECT COUNT(m) FROM ChatMessageEntity m WHERE m.senderId = :senderId AND m.recipientId = :recipientId AND m.status <> :status")
+int countUnreadMessages(Long senderId, Long recipientId, MessageStatus status);
 }
