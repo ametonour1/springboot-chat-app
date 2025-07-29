@@ -9,8 +9,11 @@ import java.util.stream.Collectors;
 import javax.persistence.EntityNotFoundException;
 import javax.transaction.Transactional;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
+
 
 import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.MessageStatusEvent;
@@ -74,6 +77,8 @@ public class ChatService {
                 true // this is sender's own message
             );
             messagingTemplate.convertAndSend("/topic/messages/" + message.getSenderId().toString(), msgToSender);
+
+            redisService.addMessageToCache(entity.getSenderId(),entity.getRecipientId(),entity);
     }
 
     private ChatMessageEntity mapDtoToEntity(ChatMessage dto) {
@@ -155,6 +160,13 @@ public class ChatService {
 }
     @Transactional  
     public int markMessagesAsRead(Long senderId, Long recipientId) {
+         int count = chatMessageRepository.countUnreadMessages(senderId, recipientId, MessageStatus.READ);
+        if (count == 0) {
+            System.out.println("retuning no messes to update for" + senderId + recipientId);
+
+            return 0; // Nothing to do
+        }
+
         System.out.println("updateingMessaegs" + senderId + recipientId);
 
         return chatMessageRepository.bulkUpdateStatusBySenderAndRecipient(senderId, recipientId, MessageStatus.READ);
@@ -174,6 +186,7 @@ public class ChatService {
         }
 
         message.setStatus(status);
+        redisService.updateCachedMessageStatus(message);
         chatMessageRepository.save(message);
 
         // Notify sender if needed
@@ -200,6 +213,7 @@ public class ChatService {
          message.setStatus(status);
          Long senderId = message.getSenderId();
         // chatMessageRepository.save(message);
+        redisService.updateCachedMessageStatus(message);
         markMessagesAsRead(senderId, recipientId);
         
 
@@ -218,5 +232,11 @@ public class ChatService {
         // Step 2: Get latest delivered message per sender
         return chatMessageRepository.findLatestDeliveredMessagesPerSender(recipientId);
     }
+
+    public List<ChatMessageEntity> getMessagesBetweenUsers(Long userId1, Long userId2, int skip, int limit) {
+    int page = skip / limit;
+    Pageable pageable = PageRequest.of(page, limit);
+    return chatMessageRepository.findMessagesByParticipants(userId1, userId2, pageable).getContent();
+}
    
 }

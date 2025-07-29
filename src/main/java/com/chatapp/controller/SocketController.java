@@ -1,10 +1,14 @@
 package com.chatapp.controller;
 
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -14,7 +18,7 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.messaging.Message;
 
-
+import com.chatapp.dto.CachedMessagesRequest;
 import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.ChatMessageReadDto;
 import com.chatapp.dto.MessageStatusEvent;
@@ -125,5 +129,58 @@ public void handleMarkAsRead(ChatMessageReadDto dto, @Header("simpSessionId") St
     messageStatusProducer.sendStatusUpdate(event);
 }
 
+
+   @MessageMapping("/get-cached-messages")
+    public void getCachedMessages(@Payload CachedMessagesRequest request) {
+       Long senderId = request.getSenderId();
+    Long recipientId = request.getRecipientId();
+    int offset = request.getOffset() != null ? request.getOffset() : 0;
+    int limit = request.getLimit() != null ? request.getLimit() : 10;
+
+    final int MAX_CACHED_MESSAGES = 10;
+
+    List<ChatMessageEntity> resultMessages = new ArrayList<>();
+
+    if (offset >= MAX_CACHED_MESSAGES) {
+        System.out.println("offser is > max chaage retuning only from db, offset:" + offset );
+
+        // Fetch only from DB with adjusted offset
+        int dbSkip = offset;
+        resultMessages = new ArrayList<>(chatService.getMessagesBetweenUsers(senderId, recipientId, dbSkip, limit));
+        Collections.reverse(resultMessages);
+
+    } else {
+        System.out.println("fetching chached messaeges,  offset:" + offset );
+
+        // Fetch from cache first
+        List<ChatMessageEntity> cachedMessages = redisService.getCachedMessages(senderId, recipientId);
+
+        int skipCached = offset;
+
+        List<ChatMessageEntity> cachedSlice = cachedMessages.stream()
+            .skip(skipCached)
+            .limit(limit)
+            .collect(Collectors.toList());
+
+        resultMessages.addAll(cachedSlice);
+
+        int cachedReturned = cachedSlice.size();
+
+        // If cached messages are less than limit, fetch the rest from DB
+        if (cachedReturned < limit) {
+           int remaining = limit - cachedReturned;
+            int dbSkip = offset + cachedReturned; // Skip already returned cached + offset
+        System.out.println("the chaged messaegs are not engouh retuning remaing from db, offset:" + dbSkip + remaining );
+
+          List<ChatMessageEntity> dbMessages = new ArrayList<>(chatService.getMessagesBetweenUsers(senderId, recipientId, dbSkip, remaining));
+            Collections.reverse(dbMessages); 
+            resultMessages.addAll(dbMessages);
+        }
+    }
+
+        // Send messages back to the requesting user
+        String destination = "/topic/cached-messages/" + senderId;
+        messagingTemplate.convertAndSend(destination, resultMessages);
+    }
  
 }

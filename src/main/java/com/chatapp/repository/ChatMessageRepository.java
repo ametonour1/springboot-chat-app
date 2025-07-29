@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -64,5 +66,25 @@ List<ChatMessageEntity> findLatestDeliveredMessagesPerSender(@Param("recipientId
 int bulkUpdateStatusBySenderAndRecipient(@Param("senderId") Long senderId, 
                                         @Param("recipientId") Long recipientId,
                                         @Param("status") MessageStatus status);
+ 
+         
                                         
+
+@Query("SELECT COUNT(m) FROM ChatMessageEntity m WHERE m.senderId = :senderId AND m.recipientId = :recipientId AND m.status <> :status")
+int countUnreadMessages(Long senderId, Long recipientId, MessageStatus status);
+
+@Query("""
+    SELECT m FROM ChatMessageEntity m
+    WHERE 
+        (m.senderId = :userId1 AND m.recipientId = :userId2)
+        OR 
+        (m.senderId = :userId2 AND m.recipientId = :userId1)
+    ORDER BY m.timestamp DESC
+""")
+Page<ChatMessageEntity> findMessagesByParticipants(
+    @Param("userId1") Long userId1,
+    @Param("userId2") Long userId2,
+    Pageable pageable
+);
 }
+
