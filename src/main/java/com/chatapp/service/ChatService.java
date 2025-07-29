@@ -9,8 +9,11 @@ import java.util.stream.Collectors;
 import javax.persistence.EntityNotFoundException;
 import javax.transaction.Transactional;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
+
 
 import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.MessageStatusEvent;
@@ -229,5 +232,11 @@ public class ChatService {
         // Step 2: Get latest delivered message per sender
         return chatMessageRepository.findLatestDeliveredMessagesPerSender(recipientId);
     }
+
+    public List<ChatMessageEntity> getMessagesBetweenUsers(Long userId1, Long userId2, int skip, int limit) {
+    int page = skip / limit;
+    Pageable pageable = PageRequest.of(page, limit);
+    return chatMessageRepository.findMessagesByParticipants(userId1, userId2, pageable).getContent();
+}
    
 }
