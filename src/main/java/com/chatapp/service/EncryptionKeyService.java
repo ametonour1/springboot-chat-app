@@ -5,14 +5,17 @@ import com.chatapp.dto.EncryptionKeyDTO;
 import com.chatapp.model.EncryptionKey;
 import com.chatapp.repository.EncryptionKeyRepository;
 import org.springframework.stereotype.Service;
+import com.chatapp.service.RedisService;
 
 @Service
 public class EncryptionKeyService {
 
     private final EncryptionKeyRepository encryptionKeyRepository;
+    private final RedisService redisService;
 
-    public EncryptionKeyService(EncryptionKeyRepository encryptionKeyRepository) {
+    public EncryptionKeyService(EncryptionKeyRepository encryptionKeyRepository, RedisService redisService) {
         this.encryptionKeyRepository = encryptionKeyRepository;
+        this.redisService = redisService;
     }
 
     public boolean userHasKeys(String userId) {
@@ -24,6 +27,7 @@ public class EncryptionKeyService {
             return false;
         }
         encryptionKeyRepository.save(key);
+        redisService.cacheUserPublicKey(key.getUserId(), key.getPublicKey());
         return true;
     }
 
