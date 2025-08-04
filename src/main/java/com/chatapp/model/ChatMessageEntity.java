@@ -6,12 +6,6 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
 
 @Getter
 @Setter
@@ -40,11 +34,28 @@ public class ChatMessageEntity {
     @Column(nullable = false)
     private MessageStatus status = MessageStatus.SENT;
 
-    // Optional constructor
-    public ChatMessageEntity(Long senderId, Long recipientId, String content, MessageStatus status) {
+     @Column(columnDefinition = "TEXT")
+    private String encryptedAESKeyForSender;
+
+    @Column(columnDefinition = "TEXT")
+    private String encryptedAESKeyForRecipient;
+
+    private String iv;
+
+    public ChatMessageEntity(Long senderId,
+                            Long recipientId,
+                            String content,
+                            MessageStatus status,
+                            String encryptedAESKeyForSender,
+                            String encryptedAESKeyForRecipient,
+                            String iv) {
         this.senderId = senderId;
         this.recipientId = recipientId;
         this.content = content;
         this.status = status;
+        this.encryptedAESKeyForSender = encryptedAESKeyForSender;
+        this.encryptedAESKeyForRecipient = encryptedAESKeyForRecipient;
+        this.iv = iv;
     }
+
 }

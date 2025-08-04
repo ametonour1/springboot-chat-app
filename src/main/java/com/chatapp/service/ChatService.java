@@ -55,8 +55,11 @@ public class ChatService {
                 message.getRecipientId(),
                 message.getContent(),
                 message.getTimestamp(),
-                message.getStatus(),
-                false // not sender
+                message.getStatus(),      
+                false ,
+                entity.getEncryptedAESKeyForSender(),
+                entity.getEncryptedAESKeyForRecipient(),
+                entity.getIv()
             );
             messagingTemplate.convertAndSend("/topic/messages/" + message.getRecipientId().toString(), msgToRecipient);
         } else {
@@ -74,7 +77,10 @@ public class ChatService {
                 message.getContent(),
                 message.getTimestamp(),
                 message.getStatus(),
-                true // this is sender's own message
+                true,  
+                entity.getEncryptedAESKeyForSender(),
+                entity.getEncryptedAESKeyForRecipient(),
+                entity.getIv()
             );
             messagingTemplate.convertAndSend("/topic/messages/" + message.getSenderId().toString(), msgToSender);
 
@@ -87,6 +93,11 @@ public class ChatService {
     entity.setRecipientId(dto.getRecipientId());
     entity.setContent(dto.getContent());
     entity.setStatus(MessageStatus.SENT); // or default status
+
+    entity.setEncryptedAESKeyForSender(dto.getEncryptedAESKeyForSender());
+    entity.setEncryptedAESKeyForRecipient(dto.getEncryptedAESKeyForRecipient());
+    entity.setIv(dto.getIv());
+
     return entity;
 }
 
@@ -121,8 +132,9 @@ public class ChatService {
             boolean hasUnreadMessages = hasUnreadMessagesFrom(
             user.getId().toString(), // sender
             userId                   // recipient (you)
-        );;
-            return new RecentChatterDto(user.getId().toString(), user.getUsername(), isOnline , hasUnreadMessages);
+        );
+            String publicKey = redisService.getUserPublicKey(user.getId().toString()); 
+            return new RecentChatterDto(user.getId().toString(), user.getUsername(), isOnline , hasUnreadMessages,publicKey);
             })
             .collect(Collectors.toList());
 }
