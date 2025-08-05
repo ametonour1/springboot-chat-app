@@ -108,6 +108,9 @@ public class ChatService {
     public void updateRecentChats(String userId, String chatterId) {
         
       redisService.addRecentChatter(userId, chatterId);
+      redisService.addRecentChatter(chatterId,userId);
+
+
     }
 
     public void returneRecentChats(String userId) {
@@ -246,9 +249,8 @@ public class ChatService {
     }
 
     public List<ChatMessageEntity> getMessagesBetweenUsers(Long userId1, Long userId2, int skip, int limit) {
-    int page = skip / limit;
-    Pageable pageable = PageRequest.of(page, limit);
-    return chatMessageRepository.findMessagesByParticipants(userId1, userId2, pageable).getContent();
+   
+     return chatMessageRepository.findMessagesBetweenUsers(userId1, userId2, skip, limit);
 }
    
 }

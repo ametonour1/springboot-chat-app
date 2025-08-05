@@ -285,7 +285,8 @@ public class UserService {
         List<User> users = userRepository.findTop10ByUsernameStartingWithIgnoreCase(prefix);
         
         return users.stream()
-            .map(user -> new UserSearchDto(user.getId(), user.getUsername()))
+            .map(user -> {  String publicKey = redisService.getUserPublicKey(user.getId().toString()); // assumes Redis keys are String-based
+            return new UserSearchDto(user.getId(), user.getUsername(), publicKey);})
             .collect(Collectors.toList());
     }
 

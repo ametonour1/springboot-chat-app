@@ -86,5 +86,20 @@ Page<ChatMessageEntity> findMessagesByParticipants(
     @Param("userId2") Long userId2,
     Pageable pageable
 );
+
+
+@Query(value = """
+    SELECT * FROM chat_messages
+    WHERE (sender_id = :userId1 AND recipient_id = :userId2)
+       OR (sender_id = :userId2 AND recipient_id = :userId1)
+    ORDER BY timestamp DESC
+    LIMIT :limit OFFSET :offset
+""", nativeQuery = true)
+List<ChatMessageEntity> findMessagesBetweenUsers(
+    @Param("userId1") Long userId1,
+    @Param("userId2") Long userId2,
+    @Param("offset") int offset,
+    @Param("limit") int limit
+);
 }
 
