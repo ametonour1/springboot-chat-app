@@ -6,15 +6,17 @@ public class RecentChatterDto {
     private String profileImageUrl; // optional
     private boolean isOnline;
     private boolean hasUnreadMessage;
+    private String publicKey;
 
     public RecentChatterDto() {
     }
 
-    public RecentChatterDto(String userId, String username, boolean isOnline, boolean hasUnreadMessage) {
+    public RecentChatterDto(String userId, String username, boolean isOnline, boolean hasUnreadMessage, String publicKey) {
         this.userId = userId;
         this.username = username;
         this.isOnline = isOnline;
         this.hasUnreadMessage = hasUnreadMessage;
+        this.publicKey = publicKey;
        
     }
 
@@ -57,5 +59,13 @@ public class RecentChatterDto {
 
     public void setHasUnreadMessage(boolean hasUnreadMessage) {
         this.hasUnreadMessage = hasUnreadMessage;
+    }
+
+     public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
     }
 }

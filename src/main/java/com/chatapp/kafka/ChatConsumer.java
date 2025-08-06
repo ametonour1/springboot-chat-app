@@ -36,7 +36,7 @@ public class ChatConsumer {
                            " -> " + message.getContent());
            System.out.println("hello: ");
            chatService.sendMessageToUser(message.getRecipientId().toString(), message);
-           chatService.updateRecentChats(message.getSenderId().toString(), message.getRecipientId().toString());
+           //chatService.updateRecentChats(message.getSenderId().toString(), message.getRecipientId().toString());
            chatService.pushRecentChatUpdates(
                 message.getSenderId().toString(),
                 message.getRecipientId().toString()

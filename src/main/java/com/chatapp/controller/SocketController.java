@@ -162,19 +162,22 @@ public void handleMarkAsRead(ChatMessageReadDto dto, @Header("simpSessionId") St
             .limit(limit)
             .collect(Collectors.toList());
 
-        resultMessages.addAll(cachedSlice);
 
         int cachedReturned = cachedSlice.size();
+                System.out.println("cache returned:" + cachedReturned);
+        
 
         // If cached messages are less than limit, fetch the rest from DB
         if (cachedReturned < limit) {
            int remaining = limit - cachedReturned;
             int dbSkip = offset + cachedReturned; // Skip already returned cached + offset
-        System.out.println("the chaged messaegs are not engouh retuning remaing from db, offset:" + dbSkip + remaining );
+        System.out.println("the chaged messaegs are not engouh retuning remaing from db, dbSkip:" + dbSkip+"remaining:" + remaining );
 
           List<ChatMessageEntity> dbMessages = new ArrayList<>(chatService.getMessagesBetweenUsers(senderId, recipientId, dbSkip, remaining));
             Collections.reverse(dbMessages); 
             resultMessages.addAll(dbMessages);
+            resultMessages.addAll(cachedSlice);
+
         }
     }
 

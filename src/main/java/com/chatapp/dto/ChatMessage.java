@@ -9,12 +9,16 @@ public class ChatMessage {
     private long timestamp;
     private MessageStatus status;
     private boolean me; 
-    private Long id; 
+    private Long id;
+    private String encryptedAESKeyForSender;
+    private String encryptedAESKeyForRecipient;
+    private String iv; 
 
     // Constructors
     public ChatMessage() {}
 
-    public ChatMessage(Long id, Long senderId, Long recipientId, String content, long timestamp, MessageStatus status, boolean me) {
+    public ChatMessage(Long id, Long senderId, Long recipientId, String content, long timestamp, MessageStatus status, boolean me,String encryptedAESKeyForSender, String encryptedAESKeyForRecipient,
+                      String iv) {
         this.senderId = senderId;
         this.recipientId = recipientId;
         this.content = content;
@@ -22,6 +26,9 @@ public class ChatMessage {
         this.status = status;
         this.me = me;
         this.id = id;
+        this.encryptedAESKeyForSender = encryptedAESKeyForSender;
+        this.encryptedAESKeyForRecipient = encryptedAESKeyForRecipient;
+        this.iv = iv;
     }
 
     // Getters and setters
@@ -47,4 +54,28 @@ public class ChatMessage {
        
     public boolean isMe() { return me; }
     public void setMe(boolean me) { this.me = me; }
+
+     public String getEncryptedAESKeyForSender() {
+        return encryptedAESKeyForSender;
+    }
+
+    public void setEncryptedAESKeyForSender(String encryptedAESKeyForSender) {
+        this.encryptedAESKeyForSender = encryptedAESKeyForSender;
+    }
+
+    public String getEncryptedAESKeyForRecipient() {
+        return encryptedAESKeyForRecipient;
+    }
+
+    public void setEncryptedAESKeyForRecipient(String encryptedAESKeyForRecipient) {
+        this.encryptedAESKeyForRecipient = encryptedAESKeyForRecipient;
+    }
+
+    public String getIv() {
+        return iv;
+    }
+
+    public void setIv(String iv) {
+        this.iv = iv;
+    }
 }

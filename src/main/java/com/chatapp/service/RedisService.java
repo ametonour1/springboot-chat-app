@@ -31,6 +31,7 @@ public class RedisService {
     private static final String SOCKET_USER_KEY = "socket:user:";
     private static final String USER_LAST_SEEN_KEY = "user:lastseen:";
     private static final String CHATTED_WITH_KEY_PREFIX = "recent:chatted:with:";
+    private static final String USER_PUBLIC_KEY = "public_key:";
 
 
     private final ObjectMapper objectMapper = new ObjectMapper()
@@ -211,5 +212,11 @@ public class RedisService {
             e.printStackTrace();
         }
     }
+    public void cacheUserPublicKey(String userId, String publicKey) {
+        redisTemplate.opsForValue().set(USER_PUBLIC_KEY + userId, publicKey);
+    }
 
+    public String getUserPublicKey(String userId) {
+        return redisTemplate.opsForValue().get(USER_PUBLIC_KEY + userId);
+    }
 }
