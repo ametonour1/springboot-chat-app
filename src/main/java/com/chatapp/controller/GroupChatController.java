@@ -14,7 +14,7 @@ import com.chatapp.security.UserPrincipal;
 import com.chatapp.service.GroupChatService;
 
 @RestController
-@RequestMapping("/group-chats")
+@RequestMapping("/api/group-chats")
 public class GroupChatController {
 
     private final GroupChatService groupChatService;
@@ -27,7 +27,7 @@ public class GroupChatController {
     @PostMapping("create")
     public ResponseEntity<GroupChat> createGroupChat(@RequestBody CreateGroupChatRequest request) {
         try {
-            GroupChat groupChat = groupChatService.createGroupChat(request.getGroupName(), request.getFounderUserId());
+            GroupChat groupChat = groupChatService.createGroupChat(request.getGroupName(), request.getFounderUserId(),request.getMemberIds());
             return ResponseEntity.ok(groupChat);
         } catch (Exception e) {
             return ResponseEntity.status(500).build();

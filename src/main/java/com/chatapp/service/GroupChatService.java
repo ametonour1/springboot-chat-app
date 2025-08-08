@@ -41,7 +41,7 @@ public class GroupChatService {
 
 
 
-    public GroupChat createGroupChat(String groupName, String founderUserId) throws Exception {
+    public GroupChat createGroupChat(String groupName, String founderUserId , List<Long> memberIds) throws Exception {
     // 1. Generate a new AES group key
     String founderPublicKeyStr = redisService.getUserPublicKey(founderUserId);
     SecretKey aesKey = encryptionKeyService.generateAESKey();
@@ -78,7 +78,35 @@ public class GroupChatService {
     member.setJoinedAt(LocalDateTime.now());
     groupChatMemberRepository.save(member);
 
+    addMembersToGroupChat(savedGroupChat.getId(), memberIds, aesKey);
     return savedGroupChat;
+}
+
+public void addMembersToGroupChat(Long groupChatId, List<Long> memberIds,SecretKey aesKey) throws Exception {
+    
+
+    for (Long userId : memberIds) {
+        String publicKeyStr = redisService.getUserPublicKey(userId.toString());
+        PublicKey pubKey = encryptionKeyService.loadPublicKeyFromString(publicKeyStr);
+        byte[] encryptedKey = encryptionKeyService.encryptWithPublicKey(aesKey.getEncoded(), pubKey);
+        String encryptedKeyBase64 = Base64.getEncoder().encodeToString(encryptedKey);
+
+        // Save GroupKeyEntity
+        GroupKeyEntity memberKey = new GroupKeyEntity();
+        memberKey.setUserId(userId);
+        memberKey.setGroupChatId(groupChatId);
+        memberKey.setEncryptedKey(encryptedKeyBase64);
+        memberKey.setKeyVersion(1);
+        groupKeyRepository.save(memberKey);
+
+        // Save GroupChatMember
+        GroupChatMember member = new GroupChatMember();
+        member.setGroupChatId(groupChatId);
+        member.setUserId(userId);
+        member.setAdmin(false); // normal member
+        member.setJoinedAt(LocalDateTime.now());
+        groupChatMemberRepository.save(member);
+    }
 }
 
     public List<GroupChatEncryptedKeyDto> getEncryptedKeysForUserAndGroup(Long userId, Long groupChatId) {
