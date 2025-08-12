@@ -1,5 +1,6 @@
 package com.chatapp.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -19,9 +20,11 @@ import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.MessageStatusEvent;
 import com.chatapp.dto.RecentChatterDto;
 import com.chatapp.model.ChatMessageEntity;
+import com.chatapp.model.GroupChat;
 import com.chatapp.model.MessageStatus;
 import com.chatapp.model.User;
 import com.chatapp.repository.ChatMessageRepository;
+import com.chatapp.service.GroupChatService;
 
 @Service
 public class ChatService {
@@ -30,12 +33,15 @@ public class ChatService {
     private final RedisService redisService;
     private final ChatMessageRepository chatMessageRepository;
     private final UserService userService;
+    private final GroupChatService groupChatService;
 
-    public ChatService(SimpMessagingTemplate messagingTemplate, RedisService redisService, ChatMessageRepository chatMessageRepository, UserService userService) {
+    public ChatService(SimpMessagingTemplate messagingTemplate, RedisService redisService, ChatMessageRepository chatMessageRepository, UserService userService, GroupChatService groupChatService
+) {
         this.messagingTemplate = messagingTemplate;
         this.redisService = redisService;
         this.chatMessageRepository = chatMessageRepository;
         this.userService = userService;
+        this.groupChatService = groupChatService;
     }
 
     // Send message to user if online
@@ -105,10 +111,17 @@ public class ChatService {
         return chatMessageRepository.save(message);
     }
 
-    public void updateRecentChats(String userId, String chatterId) {
+    public void updateRecentChats(String userId, String chatterId, boolean isGroup) {
         
-      redisService.addRecentChatter(userId, chatterId);
-      redisService.addRecentChatter(chatterId,userId);
+         String prefixedChatterId = isGroup ? "group_" + chatterId : "user_" + chatterId;
+
+        redisService.addRecentChatter(userId, prefixedChatterId);
+
+        // If group, you might skip reverse because groups don’t "view" chats
+        if (!isGroup) {
+            String prefixedUserId = "user_" + userId;
+            redisService.addRecentChatter(chatterId, prefixedUserId);
+        }
 
 
     }
@@ -118,29 +131,96 @@ public class ChatService {
       redisService.getRecentChatters(userId);
     }
 
-  public List<RecentChatterDto> getRecentChattersWithDetails(String userId) {
-        List<String> chatterIds = redisService.getRecentChatters(userId);
-        List<User> users = userService.getUsersByIds(chatterIds);
+ public List<RecentChatterDto> getRecentChattersWithDetails(String userId) {
+    System.out.println("Fetching recent chatters for userId: " + userId);
+    
+    List<String> chatterIds = redisService.getRecentChatters(userId);
+    System.out.println("chatterIds from Redis: " + chatterIds);
 
-        // Map users by ID for quick lookup
-        Map<String, User> userMap = users.stream()
-            .collect(Collectors.toMap(user -> user.getId().toString(), user -> user));
+    // Separate user IDs and group IDs
+    List<String> userIds = new ArrayList<>();
+    List<String> groupIds = new ArrayList<>();
 
-        // Rebuild the list in Redis order
-        return chatterIds.stream()
-            .map(userMap::get) // get user by ID
-            .filter(Objects::nonNull) // skip nulls in case of missing users
-            .map(user -> {
-            boolean isOnline = redisService.isUserOnline(user.getId().toString());
-            boolean hasUnreadMessages = hasUnreadMessagesFrom(
-            user.getId().toString(), // sender
-            userId                   // recipient (you)
-        );
-            String publicKey = redisService.getUserPublicKey(user.getId().toString()); 
-            return new RecentChatterDto(user.getId().toString(), user.getUsername(), isOnline , hasUnreadMessages,publicKey);
-            })
-            .collect(Collectors.toList());
+   for (String id : chatterIds) {
+    if (id.startsWith("group_")) {
+        groupIds.add(id.replace("group_", ""));
+    } else if (id.startsWith("user_")) {
+        userIds.add(id.replace("user_", ""));  // Remove the "user_" prefix here
+    } else {
+        userIds.add(id); // In case there are raw ids without prefix
+    }
 }
+
+    System.out.println("User IDs extracted: " + userIds);
+    System.out.println("Group IDs extracted: " + groupIds);
+
+    // Fetch data from DB
+    List<User> users = userService.getUsersByIds(userIds);
+    System.out.println("Users fetched from DB: " + users.size());
+
+    List<GroupChat> groups = groupChatService.getGroupsByIds(groupIds);
+    System.out.println("Groups fetched from DB: " + groups.size());
+
+    // Map for quick lookup
+    Map<String, User> userMap = users.stream()
+        .collect(Collectors.toMap(u -> u.getId().toString(), u -> u));
+    System.out.println("User map keys: " + userMap.keySet());
+
+    Map<String, GroupChat> groupMap = groups.stream()
+        .collect(Collectors.toMap(g -> "group_" + g.getId(), g -> g));
+    System.out.println("Group map keys: " + groupMap.keySet());
+
+    // Build final list preserving Redis order
+    List<RecentChatterDto> results = chatterIds.stream()
+    .map(id -> {
+        System.out.println("Processing id: " + id);
+        if (id.startsWith("group_")) {
+            String cleanGroupId = id.replace("group_", "");
+            GroupChat group = groupMap.get(cleanGroupId);
+            System.out.println("Looking up groupMap with: " + cleanGroupId + " -> " + group);
+            if (group != null) {
+                boolean hasUnreadMessages = hasUnreadMessagesFrom(cleanGroupId, userId);
+                return new RecentChatterDto(
+                    cleanGroupId,
+                    group.getName(),
+                    false,
+                    hasUnreadMessages,
+                    null,
+                    "GROUP"
+                );
+            }
+        } else if (id.startsWith("user_")) {
+            String cleanUserId = id.replace("user_", "");
+            System.out.println("Looking up userMap with: " + cleanUserId);
+            User user = userMap.get(cleanUserId);
+            System.out.println("User found: " + user);
+            if (user != null) {
+                boolean isOnline = redisService.isUserOnline(cleanUserId);
+                boolean hasUnreadMessages = hasUnreadMessagesFrom(cleanUserId, userId);
+                String publicKey = redisService.getUserPublicKey(cleanUserId);
+                return new RecentChatterDto(
+                    cleanUserId,
+                    user.getUsername(),
+                    isOnline,
+                    hasUnreadMessages,
+                    publicKey,
+                    "USER"
+                );
+            }
+        } else {
+            System.out.println("Unexpected id format: " + id);
+        }
+        System.out.println("No user or group found for id: " + id);
+        return null;
+    })
+    .filter(Objects::nonNull)
+    .collect(Collectors.toList());
+
+    System.out.println("Final RecentChatterDto list size: " + results.size());
+    return results;
+}
+
+
 
     public void emitRecentChatsUpdate(String userId, List<RecentChatterDto> chats) {
         System.out.println("emitChat" + userId + chats);
@@ -148,10 +228,12 @@ public class ChatService {
          messagingTemplate.convertAndSend("/topic/recent-chats/" + userId, chats);
     
     }
-    public void pushRecentChatUpdates(String senderId, String recipientId) {
+    public void pushRecentChatUpdates(String senderId, String recipientId, boolean isGroup) {
         // Update Redis recent chat data
-        updateRecentChats(senderId, recipientId);
+        updateRecentChats(senderId, recipientId, isGroup);
         System.out.println("pushrecentchatupdate" + senderId + recipientId);
+        System.out.println("pushRecentChatUpdates called with senderId: " + senderId + ", recipientId: " + recipientId + ", isGroup: " + isGroup);
+
 
         // Push updates to sender if online
         if (redisService.isUserOnline(senderId)) {
@@ -159,8 +241,8 @@ public class ChatService {
             emitRecentChatsUpdate(senderId, senderChats);
         }
 
-        // Push updates to recipient if online
-        if (redisService.isUserOnline(recipientId)) {
+         // Push updates to recipient if online (only if it's a private chat)
+        if (!isGroup && redisService.isUserOnline(recipientId)) {
             List<RecentChatterDto> recipientChats = getRecentChattersWithDetails(recipientId);
             emitRecentChatsUpdate(recipientId, recipientChats);
         }

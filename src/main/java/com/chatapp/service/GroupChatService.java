@@ -4,6 +4,7 @@ import java.security.PublicKey;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 
 import javax.crypto.SecretKey;
 
@@ -119,6 +120,18 @@ public void addMembersToGroupChat(Long groupChatId, List<Long> memberIds,SecretK
                 )
             ))
             .orElse(List.of());
+    }
+
+    public Optional<GroupChat> getGroupChatById(Long id) {
+        return groupChatRepository.findById(id);
+    }
+
+    public List<GroupChat> getGroupsByIds(List<String> groupIds) {
+        // Convert String IDs to Long
+        List<Long> ids = groupIds.stream()
+                .map(Long::parseLong)
+                .toList();
+        return groupChatRepository.findAllById(ids);
     }
 
     

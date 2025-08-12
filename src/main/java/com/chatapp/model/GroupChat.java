@@ -14,6 +14,9 @@ public class GroupChat {
     
     private String name;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -37,6 +40,9 @@ public class GroupChat {
     public void setName(String name) {
         this.name = name;
     }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;

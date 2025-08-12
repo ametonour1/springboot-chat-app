@@ -117,6 +117,7 @@ public void handleMarkAsRead(ChatMessageReadDto dto, @Header("simpSessionId") St
     }
 
     Long userId = Long.parseLong(userIdStr);
+    System.out.println(userIdStr+ "userIdStieng");
 
     //chatService.markMessageAsRead(dto.getMessageId(), userId);
     MessageStatusEvent event = new MessageStatusEvent();

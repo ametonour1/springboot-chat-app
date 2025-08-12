@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -73,16 +74,16 @@ public class SessionTracker {
 
    public void emitUserStatus(String userId, boolean isOnline) {
     Set<String> receivers = redisService.getUsersWhoChattedWith(userId);
+    // Filter out groups
+    receivers = receivers.stream()
+        .filter(id -> !id.startsWith("group_"))
+        .collect(Collectors.toSet());
 
     for (String receiverId : receivers) {
-        messagingTemplate.convertAndSend("/topic/status/" + receiverId, new UserStatusDto(userId, isOnline));
-            System.out.println("emiting status to " + receiverId);
-
-        // messagingTemplate.convertAndSendToUser(
-        //     receiverId,
-        //     "/queue/status",
-        //     new UserStatusDto(userId, isOnline)
-        // );
+        String normalizedReceiverId = receiverId.startsWith("user_") 
+            ? receiverId.substring(5) : receiverId;
+        messagingTemplate.convertAndSend("/topic/status/" + normalizedReceiverId, new UserStatusDto(userId, isOnline));
+        System.out.println("Emitting status to " + normalizedReceiverId);
     }
 }
 }
