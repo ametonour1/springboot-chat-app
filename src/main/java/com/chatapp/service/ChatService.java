@@ -1,6 +1,8 @@
 package com.chatapp.service;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -132,92 +134,68 @@ public class ChatService {
     }
 
  public List<RecentChatterDto> getRecentChattersWithDetails(String userId) {
-    System.out.println("Fetching recent chatters for userId: " + userId);
-    
     List<String> chatterIds = redisService.getRecentChatters(userId);
-    System.out.println("chatterIds from Redis: " + chatterIds);
 
-    // Separate user IDs and group IDs
+    // Separate chatter IDs into userIds and groupIds
     List<String> userIds = new ArrayList<>();
     List<String> groupIds = new ArrayList<>();
 
-   for (String id : chatterIds) {
-    if (id.startsWith("group_")) {
-        groupIds.add(id.replace("group_", ""));
-    } else if (id.startsWith("user_")) {
-        userIds.add(id.replace("user_", ""));  // Remove the "user_" prefix here
-    } else {
-        userIds.add(id); // In case there are raw ids without prefix
+    for (String id : chatterIds) {
+        if (id.startsWith("group_")) {
+            groupIds.add(id.substring(6)); // 6 = length of "group_"
+        } else if (id.startsWith("user_")) {
+            userIds.add(id.substring(5)); // 5 = length of "user_"
+        } else {
+            userIds.add(id);
+        }
     }
-}
 
-    System.out.println("User IDs extracted: " + userIds);
-    System.out.println("Group IDs extracted: " + groupIds);
-
-    // Fetch data from DB
-    List<User> users = userService.getUsersByIds(userIds);
-    System.out.println("Users fetched from DB: " + users.size());
-
-    List<GroupChat> groups = groupChatService.getGroupsByIds(groupIds);
-    System.out.println("Groups fetched from DB: " + groups.size());
-
-    // Map for quick lookup
-    Map<String, User> userMap = users.stream()
+    // Fetch DB data
+    Map<String, User> userMap = userService.getUsersByIds(userIds).stream()
         .collect(Collectors.toMap(u -> u.getId().toString(), u -> u));
-    System.out.println("User map keys: " + userMap.keySet());
 
-    Map<String, GroupChat> groupMap = groups.stream()
-        .collect(Collectors.toMap(g -> "group_" + g.getId(), g -> g));
-    System.out.println("Group map keys: " + groupMap.keySet());
+    Map<String, GroupChat> groupMap = groupChatService.getGroupsByIds(groupIds).stream()
+        .collect(Collectors.toMap(g -> g.getId().toString(), g -> g)); // no prefix in key
+
+    // Batch Redis lookups
+    Map<String, Boolean> onlineMap = redisService.getUsersOnlineStatus(userIds);
+    Map<String, String> publicKeyMap = redisService.getUsersPublicKeys(userIds);
+    Map<String, Boolean> unreadMap = getUsersUnreadStatus(userIds, userId);
 
     // Build final list preserving Redis order
-    List<RecentChatterDto> results = chatterIds.stream()
-    .map(id -> {
-        System.out.println("Processing id: " + id);
-        if (id.startsWith("group_")) {
-            String cleanGroupId = id.replace("group_", "");
-            GroupChat group = groupMap.get(cleanGroupId);
-            System.out.println("Looking up groupMap with: " + cleanGroupId + " -> " + group);
-            if (group != null) {
-                boolean hasUnreadMessages = hasUnreadMessagesFrom(cleanGroupId, userId);
-                return new RecentChatterDto(
-                    cleanGroupId,
-                    group.getName(),
-                    false,
-                    hasUnreadMessages,
-                    null,
-                    "GROUP"
-                );
+    return chatterIds.stream()
+        .map(id -> {
+            if (id.startsWith("group_")) {
+                String gid = id.substring(6);
+                GroupChat group = groupMap.get(gid);
+                if (group != null) {
+                    return new RecentChatterDto(
+                        gid,
+                        group.getName(),
+                        false,
+                       false,
+                        null,
+                        "GROUP"
+                    );
+                }
+            } else if (id.startsWith("user_")) {
+                String uid = id.substring(5);
+                User user = userMap.get(uid);
+                if (user != null) {
+                    return new RecentChatterDto(
+                        uid,
+                        user.getUsername(),
+                        onlineMap.getOrDefault(uid, false),
+                         unreadMap.getOrDefault(uid, false), 
+                        publicKeyMap.get(uid),
+                        "USER"
+                    );
+                }
             }
-        } else if (id.startsWith("user_")) {
-            String cleanUserId = id.replace("user_", "");
-            System.out.println("Looking up userMap with: " + cleanUserId);
-            User user = userMap.get(cleanUserId);
-            System.out.println("User found: " + user);
-            if (user != null) {
-                boolean isOnline = redisService.isUserOnline(cleanUserId);
-                boolean hasUnreadMessages = hasUnreadMessagesFrom(cleanUserId, userId);
-                String publicKey = redisService.getUserPublicKey(cleanUserId);
-                return new RecentChatterDto(
-                    cleanUserId,
-                    user.getUsername(),
-                    isOnline,
-                    hasUnreadMessages,
-                    publicKey,
-                    "USER"
-                );
-            }
-        } else {
-            System.out.println("Unexpected id format: " + id);
-        }
-        System.out.println("No user or group found for id: " + id);
-        return null;
-    })
-    .filter(Objects::nonNull)
-    .collect(Collectors.toList());
-
-    System.out.println("Final RecentChatterDto list size: " + results.size());
-    return results;
+            return null;
+        })
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
 }
 
 
@@ -255,6 +233,34 @@ public class ChatService {
         List.of(MessageStatus.SENT, MessageStatus.DELIVERED) // assuming DELIVERED still counts as unread
     );
 }
+
+public Map<String, Boolean> getUsersUnreadStatus(List<String> userIds, String recipientId) {
+    if (userIds.isEmpty()) {
+        return Collections.emptyMap();
+    }
+
+    List<Long> senderIds = userIds.stream()
+                                  .map(Long::valueOf)
+                                  .collect(Collectors.toList());
+    Long recipient = Long.valueOf(recipientId);
+    List<MessageStatus> unreadStatuses = List.of(MessageStatus.SENT, MessageStatus.DELIVERED);
+
+    List<ChatMessageRepository.SenderUnreadStatus> unreadStatusesList =
+        chatMessageRepository.findUnreadStatusBySenderIdsAndRecipientId(senderIds, recipient, unreadStatuses);
+
+    Map<String, Boolean> unreadMap = new HashMap<>();
+    // Initialize all to false (no unread)
+    userIds.forEach(id -> unreadMap.put(id, false));
+
+    // Mark those senders who have unread messages
+    for (ChatMessageRepository.SenderUnreadStatus status : unreadStatusesList) {
+        unreadMap.put(status.getSenderId().toString(), status.getHasUnread());
+    }
+
+    return unreadMap;
+}
+    
+   
     @Transactional  
     public int markMessagesAsRead(Long senderId, Long recipientId) {
          int count = chatMessageRepository.countUnreadMessages(senderId, recipientId, MessageStatus.READ);

@@ -14,9 +14,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class RedisService {
@@ -219,4 +222,34 @@ public class RedisService {
     public String getUserPublicKey(String userId) {
         return redisTemplate.opsForValue().get(USER_PUBLIC_KEY + userId);
     }
+
+    public Map<String, String> getUsersPublicKeys(List<String> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+        return Collections.emptyMap();
+    }
+
+    List<String> keys = userIds.stream()
+        .map(id -> USER_PUBLIC_KEY + id)
+        .collect(Collectors.toList());
+
+    List<String> values = redisTemplate.opsForValue().multiGet(keys);
+
+    Map<String, String> result = new HashMap<>();
+    for (int i = 0; i < userIds.size(); i++) {
+        result.put(userIds.get(i), values.get(i));
+    }
+    return result;
+}
+    public Map<String, Boolean> getUsersOnlineStatus(List<String> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+        return Collections.emptyMap();
+    }
+
+    Map<String, Boolean> result = new HashMap<>();
+    for (String userId : userIds) {
+        Long count = redisTemplate.opsForSet().size(USER_SOCKETS_KEY + userId);
+        result.put(userId, count != null && count > 0);
+    }
+    return result;
+}
 }
