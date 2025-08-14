@@ -24,9 +24,6 @@ public class GroupChatMessage {
     @Column(name = "iv", nullable = false)
     private String iv;
 
-    @Column(name = "encrypted_aes_keys", columnDefinition = "JSONB")
-    private String encryptedAESKeysJson;
-
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp = LocalDateTime.now();
 
@@ -75,13 +72,6 @@ public class GroupChatMessage {
         this.iv = iv;
     }
 
-    public String getEncryptedAESKeysJson() {
-        return encryptedAESKeysJson;
-    }
-
-    public void setEncryptedAESKeysJson(String encryptedAESKeysJson) {
-        this.encryptedAESKeysJson = encryptedAESKeysJson;
-    }
 
     public LocalDateTime getTimestamp() {
         return timestamp;

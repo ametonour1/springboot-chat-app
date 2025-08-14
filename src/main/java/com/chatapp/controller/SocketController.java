@@ -21,6 +21,7 @@ import org.springframework.messaging.Message;
 import com.chatapp.dto.CachedMessagesRequest;
 import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.ChatMessageReadDto;
+import com.chatapp.dto.GroupChatMessageRequest;
 import com.chatapp.dto.MessageStatusEvent;
 import com.chatapp.dto.SocketHandshakeMessage;
 import com.chatapp.dto.SocketHeartbeatMessage;
@@ -31,6 +32,7 @@ import com.chatapp.kafka.ChatProducer;
 import com.chatapp.kafka.MessageStatusProducer;
 import com.chatapp.model.ChatMessageEntity;
 import com.chatapp.model.MessageStatus;
+import com.chatapp.kafka.GroupChatProducer;
 
 
 @Controller
@@ -43,6 +45,8 @@ public class SocketController {
     private final ChatProducer chatProducer;
     private final MessageStatusProducer messageStatusProducer;
     private final SessionTracker sessionTracker;
+    private final GroupChatProducer groupChatProducer;
+
 
 
     @Autowired
@@ -50,13 +54,15 @@ public class SocketController {
                         RedisService redisService,
                         ChatProducer chatProducer,
                         SessionTracker sessionTracker, ChatService chatService,
-                        MessageStatusProducer messageStatusProducer) {
+                        MessageStatusProducer messageStatusProducer,
+                        GroupChatProducer groupChatProducer) {
     this.messagingTemplate = messagingTemplate;
     this.redisService = redisService;
     this.chatProducer = chatProducer;  
     this.sessionTracker = sessionTracker;  
     this.chatService = chatService;
     this.messageStatusProducer = messageStatusProducer;
+    this.groupChatProducer = groupChatProducer;
 }
   
     @MessageMapping("/register")
@@ -163,6 +169,8 @@ public void handleMarkAsRead(ChatMessageReadDto dto, @Header("simpSessionId") St
             .limit(limit)
             .collect(Collectors.toList());
 
+        System.out.println("the cagcgedSlice" + cachedSlice );
+
 
         int cachedReturned = cachedSlice.size();
                 System.out.println("cache returned:" + cachedReturned);
@@ -177,14 +185,27 @@ public void handleMarkAsRead(ChatMessageReadDto dto, @Header("simpSessionId") St
           List<ChatMessageEntity> dbMessages = new ArrayList<>(chatService.getMessagesBetweenUsers(senderId, recipientId, dbSkip, remaining));
             Collections.reverse(dbMessages); 
             resultMessages.addAll(dbMessages);
-            resultMessages.addAll(cachedSlice);
+            
 
         }
+        resultMessages.addAll(cachedSlice);
     }
 
         // Send messages back to the requesting user
+        System.out.println("the cached messaegs resultMessages " + resultMessages);
+
         String destination = "/topic/cached-messages/" + senderId;
         messagingTemplate.convertAndSend(destination, resultMessages);
     }
  
+    //group chats
+
+
+    @MessageMapping("/group-chat/chat.send")
+    public void handleGroupChatMessage(@Payload GroupChatMessageRequest message, SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        System.out.println("Message received from session: " + sessionId);
+        groupChatProducer.sendMessage(message);
+
+    }
 }
