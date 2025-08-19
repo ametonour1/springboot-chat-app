@@ -35,6 +35,8 @@ public class RedisService {
     private static final String USER_LAST_SEEN_KEY = "user:lastseen:";
     private static final String CHATTED_WITH_KEY_PREFIX = "recent:chatted:with:";
     private static final String USER_PUBLIC_KEY = "public_key:";
+    private static final String GROUP_MEMBERS_KEY = "members:group:";
+
 
 
     private final ObjectMapper objectMapper = new ObjectMapper()
@@ -252,4 +254,18 @@ public class RedisService {
     }
     return result;
 }
+
+    
+    public void addGroupMember(Long groupId, String userId) {
+        String membersKey = GROUP_MEMBERS_KEY + groupId;
+        redisTemplate.opsForSet().add(membersKey, userId);
+    }
+
+
+    public Set<String> getGroupMembers(Long groupId) {
+        String membersKey = GROUP_MEMBERS_KEY + groupId;
+        Set<String> members = redisTemplate.opsForSet().members(membersKey);
+        return members != null ? members : Collections.emptySet();
+    }
+
 }

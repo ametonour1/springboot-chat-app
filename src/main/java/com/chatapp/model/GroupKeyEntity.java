@@ -22,6 +22,9 @@ public class GroupKeyEntity {
 
     @Column(name = "group_chat_id", nullable = false)
     private Long groupChatId;
+    
+    @Column(name = "iv", nullable = false, columnDefinition = "TEXT")
+    private String iv; // New IV field for symmetric encryption
 
     // Getters and Setters
 
@@ -65,5 +68,13 @@ public class GroupKeyEntity {
 
     public void setGroupChatId(Long groupChatId) {
         this.groupChatId = groupChatId;
+    }
+
+    public String getIv() {
+        return iv;
+    }
+
+    public void setIv(String iv) {
+        this.iv = iv;
     }
 }

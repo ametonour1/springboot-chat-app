@@ -286,7 +286,7 @@ public class UserService {
         
         return users.stream()
             .map(user -> {  String publicKey = redisService.getUserPublicKey(user.getId().toString()); // assumes Redis keys are String-based
-            return new UserSearchDto(user.getId(), user.getUsername(), publicKey);})
+            return new UserSearchDto(user.getId(), user.getUsername(), publicKey, "USER");})
             .collect(Collectors.toList());
     }
 

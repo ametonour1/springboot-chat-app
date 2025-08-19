@@ -65,20 +65,22 @@ public class EncryptionKeyService {
         );
     }
 
-    public SecretKey generateAESKey() throws NoSuchAlgorithmException {
+      public static SecretKey generateAESKey() throws NoSuchAlgorithmException {
         KeyGenerator keyGen = KeyGenerator.getInstance("AES");
         keyGen.init(256);
         return keyGen.generateKey();
-        }
+    }
 
-    public byte[] encryptWithPublicKey(byte[] data, PublicKey publicKey) throws GeneralSecurityException {
-        Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+    // Encrypt AES key with RSA public key using SHA-1 (compatible with Web Crypto)
+    public static byte[] encryptWithPublicKey(byte[] data, PublicKey publicKey) throws GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding");
         cipher.init(Cipher.ENCRYPT_MODE, publicKey);
         return cipher.doFinal(data);
     }
 
-    public PublicKey loadPublicKeyFromString(String keyStr) throws GeneralSecurityException {
-        byte[] keyBytes = Base64.getDecoder().decode(keyStr);
+    // Load public key from Base64 string
+    public static PublicKey loadPublicKeyFromString(String keyStr) throws GeneralSecurityException {
+        byte[] keyBytes = java.util.Base64.getDecoder().decode(keyStr);
         X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
         KeyFactory kf = KeyFactory.getInstance("RSA");
         return kf.generatePublic(spec);

@@ -27,7 +27,13 @@ public class GroupChatController {
     @PostMapping("create")
     public ResponseEntity<GroupChat> createGroupChat(@RequestBody CreateGroupChatRequest request) {
         try {
-            GroupChat groupChat = groupChatService.createGroupChat(request.getGroupName(), request.getFounderUserId(),request.getMemberIds());
+            GroupChat groupChat = groupChatService.createGroupChat(request);
+            System.out.println("groupRequest " + request);
+               if (request.getMembers() != null) {
+                for (CreateGroupChatRequest.GroupMemberDto memberDto : request.getMembers()) {
+                   System.out.println("User ID: {}, isAdmin: {}"+ memberDto.getUserId()+ memberDto.getIsAdminUser());
+                }
+        }
             return ResponseEntity.ok(groupChat);
         } catch (Exception e) {
             return ResponseEntity.status(500).build();
