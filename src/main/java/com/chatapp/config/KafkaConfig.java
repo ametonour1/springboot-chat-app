@@ -19,6 +19,7 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import com.chatapp.dto.ChatMessage;
+import com.chatapp.dto.GroupChatMessageRequest;
 import com.chatapp.dto.MessageStatusEvent;
 import com.chatapp.dto.UserStatusChangedEvent;
 
@@ -144,4 +145,43 @@ public ConsumerFactory<String, UserStatusChangedEvent> userStatusConsumerFactory
         factory.setConsumerFactory(messageStatusConsumerFactory());
         return factory;
     }
+
+
+    //groups 
+    @Bean
+public ProducerFactory<String, GroupChatMessageRequest> groupChatProducerFactory() {
+    Map<String, Object> config = new HashMap<>();
+    config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+    return new DefaultKafkaProducerFactory<>(config);
+}
+
+@Bean
+public KafkaTemplate<String, GroupChatMessageRequest> groupChatKafkaTemplate() {
+    return new KafkaTemplate<>(groupChatProducerFactory());
+}
+
+@Bean
+public ConsumerFactory<String, GroupChatMessageRequest> groupChatConsumerFactory() {
+    JsonDeserializer<GroupChatMessageRequest> deserializer = new JsonDeserializer<>(GroupChatMessageRequest.class);
+    deserializer.addTrustedPackages("*");
+    return new DefaultKafkaConsumerFactory<>(
+        Map.of(
+            ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
+            ConsumerConfig.GROUP_ID_CONFIG, "group-chat-consumers",
+            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
+            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class
+        ),
+        new StringDeserializer(),
+        deserializer
+    );
+}
+
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, GroupChatMessageRequest> groupChatKafkaListenerContainerFactory() {
+    var factory = new ConcurrentKafkaListenerContainerFactory<String, GroupChatMessageRequest>();
+    factory.setConsumerFactory(groupChatConsumerFactory());
+    return factory;
+}
 }
