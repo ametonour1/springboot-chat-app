@@ -51,8 +51,9 @@ public class ChatController {
 
     @GetMapping("/search-user")
     public ResponseEntity<List<UserSearchDto>> searchUsersprivateEndpoint(Authentication authentication ,@RequestParam String username) {
-
-          List<UserSearchDto> results = userService.findUsersByUsernamePrefix(username);
+    UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+          Long userId = principal.getUserId();
+          List<UserSearchDto> results = userService.findUsersByUsernamePrefix(username, userId);
           return ResponseEntity.ok(results);
     }
 

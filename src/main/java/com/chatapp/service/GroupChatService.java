@@ -26,6 +26,8 @@ import com.chatapp.model.GroupChat;
 import com.chatapp.model.GroupChatMember;
 import com.chatapp.model.GroupChatMessage;
 import com.chatapp.model.GroupKeyEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+
 
 @Service
 public class GroupChatService {
@@ -37,6 +39,8 @@ public class GroupChatService {
     private final EncryptionKeyService encryptionKeyService;
     private final GroupChatMessageRepository groupChatMessageRepository;
     private final RecentChatterService recentChatterService;
+    private final SimpMessagingTemplate messagingTemplate;
+
 
         @Autowired
     public GroupChatService(GroupChatRepository groupChatRepository,
@@ -45,7 +49,9 @@ public class GroupChatService {
                             RedisService redisService,
                             EncryptionKeyService encryptionKeyService,
                             GroupChatMessageRepository groupChatMessageRepository,
-                            RecentChatterService recentChatterService
+                            RecentChatterService recentChatterService,
+                            SimpMessagingTemplate messagingTemplate
+                            
                             ) {
         this.groupChatRepository = groupChatRepository;
         this.groupChatMemberRepository = groupChatMemberRepository;
@@ -54,6 +60,8 @@ public class GroupChatService {
         this.encryptionKeyService = encryptionKeyService;
         this.groupChatMessageRepository = groupChatMessageRepository;
         this.recentChatterService = recentChatterService;
+        this.messagingTemplate = messagingTemplate;
+
     }
 
 
@@ -159,9 +167,31 @@ public class GroupChatService {
         System.out.println("Sender: " + message.getSenderId());
         System.out.println("Message: " + message.getContent());
 
-        saveMessage(message);
-        recentChatterService.pushRecentChatUpdatesForGroup(message.getGroupChatId());
+        // saveMessage(message);
+        // recentChatterService.pushRecentChatUpdatesForGroup(message.getGroupChatId());
         // Later we will call Kafka producer or other services here
+        GroupChatMessage savedEntity = saveMessage(message);
+
+        if (savedEntity != null) {
+         
+            try {
+                redisService.addToGroupCache(
+                    savedEntity.getGroupChatId().toString(), 
+                    savedEntity
+                );
+            } catch (Exception e) {
+                // We log but don't crash; if Redis is down, the app should still work
+                e.printStackTrace();
+            }
+            String destination = "/topic/group/" + message.getGroupChatId();
+            messagingTemplate.convertAndSend(destination, savedEntity);
+
+         
+            recentChatterService.pushRecentChatUpdatesForGroup(message.getGroupChatId());
+            
+            // 4. (Optional) Push to Redis for the history/cache logic we discussed
+            // redisTemplate.opsForList().leftPush("group_history:" + message.getGroupChatId(), savedEntity);
+        }
     }
 
         public GroupChatMessage saveMessage(GroupChatMessageRequest message) {
@@ -181,5 +211,25 @@ public class GroupChatService {
     }
     
 
+    public List<GroupChatMessage> getGroupMessages(String groupId, int offset, int limit) {
+
+        List<GroupChatMessage> cachedMessages = redisService.getCachedMessagesWithOffset(groupId, offset, limit);
+
+  
+        if (cachedMessages.size() < limit) {
+           // This will show up in your IDE console in white text
+            System.out.println("--- CACHE MISS ---");
+            System.out.println("Group ID: " + groupId);
+            System.out.println("Offset: " + offset);
+            System.out.println("Redis returned: " + cachedMessages.size() + " messages.");
+            System.out.println("Action: Need to fetch from Postgres next.");
+            System.out.println("------------------");
+            // TODO: Layer 4 - Fetch the remaining 'n' messages from Postgres
+            // List<GroupChatMessage> dbMessages = groupMessageRepository.findWithOffset(...);
+            // Combine them...
+        }
+
+        return cachedMessages;
+    }
 
 }

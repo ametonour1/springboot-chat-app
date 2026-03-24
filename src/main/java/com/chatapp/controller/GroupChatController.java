@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import com.chatapp.dto.CreateGroupChatRequest;
 import com.chatapp.dto.GroupChatEncryptedKeyDto;
 import com.chatapp.model.GroupChat;
+import com.chatapp.model.GroupChatMessage;
 import com.chatapp.security.UserPrincipal;
 import com.chatapp.service.GroupChatService;
 
@@ -52,4 +53,17 @@ public class GroupChatController {
             }
             return ResponseEntity.ok(keys);
 }
+
+@GetMapping("/{groupId}/messages")
+    public ResponseEntity<List<GroupChatMessage>> getGroupMessages(
+            @PathVariable String groupId,
+            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "20") int limit) {
+        
+        System.out.println("API Request: Fetching group " + groupId + " | Offset: " + offset);
+        
+        List<GroupChatMessage> messages = groupChatService.getGroupMessages(groupId, offset, limit);
+        
+        return ResponseEntity.ok(messages);
+    }
 }   

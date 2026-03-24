@@ -281,10 +281,11 @@ public class UserService {
         userRepository.save(user); // Save the updated user
     }
 
-    public List<UserSearchDto> findUsersByUsernamePrefix(String prefix) {
+    public List<UserSearchDto> findUsersByUsernamePrefix(String prefix, Long userId) {
         List<User> users = userRepository.findTop10ByUsernameStartingWithIgnoreCase(prefix);
         
         return users.stream()
+            .filter(user -> !user.getId().equals(userId))
             .map(user -> {  String publicKey = redisService.getUserPublicKey(user.getId().toString()); // assumes Redis keys are String-based
             return new UserSearchDto(user.getId(), user.getUsername(), publicKey, "USER");})
             .collect(Collectors.toList());
