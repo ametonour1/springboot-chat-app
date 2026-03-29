@@ -325,4 +325,34 @@ public List<GroupChatMessage> getCachedMessagesWithOffset(String groupId, int of
     Collections.reverse(messages); // Oldest to Newest for the UI
     return messages;
 }
+
+public List<GroupChatMessage> getMessagesAfterScore(String groupId, double minScore) {
+    String key = "group:cache:" + groupId;
+    
+    // We start at minScore + 1 to exclude the message they already have
+    double startScore = minScore + 1.0;
+    double endScore = Double.MAX_VALUE; // All the way to the newest message
+
+    // Fetch the raw JSON strings from the Sorted Set
+    Set<String> jsonMsgs = redisTemplate.opsForZSet().rangeByScore(key, startScore, endScore);
+
+    if (jsonMsgs == null || jsonMsgs.isEmpty()) {
+        return Collections.emptyList();
+    }
+
+      List<GroupChatMessage> messages = new ArrayList<>();
+    try {
+        for (String json : jsonMsgs) {
+            // Manually deserialize just like your 1v1 getCachedMessages
+            GroupChatMessage msg = objectMapper.readValue(json, GroupChatMessage.class);
+            messages.add(msg);
+        }
+    } catch (Exception e) {
+         e.printStackTrace();
+
+    }
+
+    Collections.reverse(messages); // Oldest to Newest for the UI
+    return messages;
+}
 }

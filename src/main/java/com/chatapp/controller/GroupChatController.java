@@ -66,4 +66,16 @@ public class GroupChatController {
         
         return ResponseEntity.ok(messages);
     }
+
+ @GetMapping("/{groupId}/sync")
+public ResponseEntity<List<GroupChatMessage>> syncGroupMessages(
+        @PathVariable String groupId,
+        @RequestParam String lastTimestamp) {
+    
+    System.out.println("API Request: Syncing group " + groupId + " since " + lastTimestamp);
+    
+    List<GroupChatMessage> messages = groupChatService.getMessagesAfter(groupId, lastTimestamp);
+    
+    return ResponseEntity.ok(messages);
+}
 }   

@@ -1,6 +1,7 @@
 package com.chatapp.service;
 
 import java.security.PublicKey;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
@@ -232,4 +233,29 @@ public class GroupChatService {
         return cachedMessages;
     }
 
+    public List<GroupChatMessage> getMessagesAfter(String groupId, String lastTimestampStr) {
+    // 1. Convert the ISO String from frontend into Epoch Milliseconds (Double for Redis)
+    double minScore;
+    try {
+        // This handles "2026-03-29T11:37:21.56819"
+        Instant instant = Instant.parse(lastTimestampStr); // Appending Z for UTC if not present
+        minScore = (double) instant.toEpochMilli();
+    } catch (Exception e) {
+        // Fallback: If parsing fails, use current time minus 24 hours so the user gets something!
+        System.err.println("Failed to parse timestamp, using fallback: " + e.getMessage());
+        minScore = (double) System.currentTimeMillis() - (24 * 60 * 60 * 1000);
+    }
+
+    // 2. Fetch the updates from Redis
+    List<GroupChatMessage> cachedUpdates = redisService.getMessagesAfterScore(groupId, minScore);
+
+    // 3. YOUR NOTE: The Next Step!
+    // If the user's last message is older than what Redis holds, 
+    // Redis might return nothing or only partial data.
+    // That's when we will fall back to Postgres. For now, let's look at the Redis result.
+    
+    System.out.println("Sync Result: Found " + cachedUpdates.size() + " new messages in Redis.");
+    
+    return cachedUpdates;
+}
 }
