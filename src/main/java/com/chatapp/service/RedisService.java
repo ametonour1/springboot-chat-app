@@ -326,7 +326,7 @@ public List<GroupChatMessage> getCachedMessagesWithOffset(String groupId, int of
     return messages;
 }
 
-public List<GroupChatMessage> getMessagesAfterScore(String groupId, double minScore) {
+public List<GroupChatMessage> getMessagesAfterScore(String groupId, double minScore, int limit) {
     String key = "group:cache:" + groupId;
     
     // We start at minScore + 1 to exclude the message they already have
@@ -334,13 +334,43 @@ public List<GroupChatMessage> getMessagesAfterScore(String groupId, double minSc
     double endScore = Double.MAX_VALUE; // All the way to the newest message
 
     // Fetch the raw JSON strings from the Sorted Set
-    Set<String> jsonMsgs = redisTemplate.opsForZSet().rangeByScore(key, startScore, endScore);
+    Set<String> jsonMsgs = redisTemplate.opsForZSet().reverseRangeByScore(key, startScore, endScore,0  ,limit);
 
     if (jsonMsgs == null || jsonMsgs.isEmpty()) {
         return Collections.emptyList();
     }
 
       List<GroupChatMessage> messages = new ArrayList<>();
+    try {
+        for (String json : jsonMsgs) {
+            // Manually deserialize just like your 1v1 getCachedMessages
+            GroupChatMessage msg = objectMapper.readValue(json, GroupChatMessage.class);
+            messages.add(msg);
+        }
+    } catch (Exception e) {
+         e.printStackTrace();
+
+    }
+
+    Collections.reverse(messages); // Oldest to Newest for the UI
+    return messages;
+}
+
+public List<GroupChatMessage> getMessagesBeforeScore(String groupId, double maxScore, int limit) {
+    String key = "group:cache:" + groupId;
+    
+    // We start looking just below the user's oldest message
+    double endScore = maxScore - 1.0; 
+    double startScore = 0; // Go as far back as Redis has memory for
+
+    // Get the messages in descending order (newest of the old messages first)
+    Set<String> jsonMsgs = redisTemplate.opsForZSet().reverseRangeByScore(key, startScore, endScore, 0, limit);
+
+    if (jsonMsgs == null || jsonMsgs.isEmpty()) {
+        return Collections.emptyList();
+    }
+
+       List<GroupChatMessage> messages = new ArrayList<>();
     try {
         for (String json : jsonMsgs) {
             // Manually deserialize just like your 1v1 getCachedMessages

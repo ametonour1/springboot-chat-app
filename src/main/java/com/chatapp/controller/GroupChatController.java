@@ -78,4 +78,17 @@ public ResponseEntity<List<GroupChatMessage>> syncGroupMessages(
     
     return ResponseEntity.ok(messages);
 }
+
+@GetMapping("/{groupId}/historical")
+public ResponseEntity<List<GroupChatMessage>> getHistoricalMessages(
+        @PathVariable String groupId,
+        @RequestParam String beforeTimestamp) {
+    
+    System.out.println("API Request: Fetching historical messages for group " + groupId + " before " + beforeTimestamp);
+    
+    // We pass our standard limit of 20 here!
+    List<GroupChatMessage> olderMessages = groupChatService.getMessagesBefore(groupId, beforeTimestamp, 20);
+    
+    return ResponseEntity.ok(olderMessages);
+}
 }   

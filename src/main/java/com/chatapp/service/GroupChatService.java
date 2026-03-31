@@ -234,20 +234,20 @@ public class GroupChatService {
     }
 
     public List<GroupChatMessage> getMessagesAfter(String groupId, String lastTimestampStr) {
-    // 1. Convert the ISO String from frontend into Epoch Milliseconds (Double for Redis)
+    
     double minScore;
     try {
-        // This handles "2026-03-29T11:37:21.56819"
-        Instant instant = Instant.parse(lastTimestampStr); // Appending Z for UTC if not present
+        
+        Instant instant = Instant.parse(lastTimestampStr); 
         minScore = (double) instant.toEpochMilli();
     } catch (Exception e) {
-        // Fallback: If parsing fails, use current time minus 24 hours so the user gets something!
+      
         System.err.println("Failed to parse timestamp, using fallback: " + e.getMessage());
         minScore = (double) System.currentTimeMillis() - (24 * 60 * 60 * 1000);
     }
 
-    // 2. Fetch the updates from Redis
-    List<GroupChatMessage> cachedUpdates = redisService.getMessagesAfterScore(groupId, minScore);
+    //limit set to 10 for testing
+    List<GroupChatMessage> cachedUpdates = redisService.getMessagesAfterScore(groupId, minScore, 10);
 
     // 3. YOUR NOTE: The Next Step!
     // If the user's last message is older than what Redis holds, 
@@ -258,4 +258,34 @@ public class GroupChatService {
     
     return cachedUpdates;
 }
+
+public List<GroupChatMessage> getMessagesBefore(String groupId, String beforeTimestampStr, int limit) {
+       
+        double maxScore;
+        try {
+            Instant instant = Instant.parse(beforeTimestampStr);
+            maxScore = (double) instant.toEpochMilli();
+        } catch (Exception e) {
+            System.err.println("Failed to parse historical timestamp: " + e.getMessage());
+            // Fallback: If parsing fails, use current time
+            maxScore = (double) System.currentTimeMillis();
+        }
+
+    
+        List<GroupChatMessage> olderMessages = redisService.getMessagesBeforeScore(groupId, maxScore, limit);
+
+        System.out.println("Historical Sync: Found " + olderMessages.size() + " messages in Redis.");
+
+        // 3. THE FUTURE POSTGRES FALLBACK:
+        // If olderMessages.size() < limit, it means Redis ran out of older data!
+        // That's when we'll fetch the remainder from Postgres like this:
+        /*
+        if (olderMessages.size() < limit) {
+            int remainingNeeded = limit - olderMessages.size();
+            // Fetch the remaining chunk from Postgres...
+        }
+        */
+
+        return olderMessages;
+    }
 }
