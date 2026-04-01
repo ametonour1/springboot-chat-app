@@ -3,6 +3,8 @@ package com.chatapp.service;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -236,23 +238,37 @@ public class GroupChatService {
     public List<GroupChatMessage> getMessagesAfter(String groupId, String lastTimestampStr) {
     
     double minScore;
+    LocalDateTime postgresAfterTime;
     try {
         
         Instant instant = Instant.parse(lastTimestampStr); 
         minScore = (double) instant.toEpochMilli();
+        postgresAfterTime = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
     } catch (Exception e) {
       
         System.err.println("Failed to parse timestamp, using fallback: " + e.getMessage());
         minScore = (double) System.currentTimeMillis() - (24 * 60 * 60 * 1000);
+        postgresAfterTime = LocalDateTime.now().minusDays(1);
     }
 
     //limit set to 10 for testing
     List<GroupChatMessage> cachedUpdates = redisService.getMessagesAfterScore(groupId, minScore, 10);
+    int SYNC_LIMIT = 10;
 
-    // 3. YOUR NOTE: The Next Step!
-    // If the user's last message is older than what Redis holds, 
-    // Redis might return nothing or only partial data.
-    // That's when we will fall back to Postgres. For now, let's look at the Redis result.
+    // If Redis is completely empty (because the cache expired after 5 days), 
+    // ONLY then do we go to Postgres to get the latest messages!
+    if (cachedUpdates.isEmpty()) {
+        System.out.println("⚠️ Redis cache was empty (possibly expired). Fetching latest messages from Postgres...");
+
+        Long parsedGroupId = Long.parseLong(groupId);
+
+        // Just fetch the latest 10 from Postgres directly! No complex combining needed.
+        return groupChatMessageRepository.findLatestGaps(
+                parsedGroupId, 
+                postgresAfterTime, 
+                SYNC_LIMIT
+        );
+    }
     
     System.out.println("Sync Result: Found " + cachedUpdates.size() + " new messages in Redis.");
     
@@ -262,13 +278,16 @@ public class GroupChatService {
 public List<GroupChatMessage> getMessagesBefore(String groupId, String beforeTimestampStr, int limit) {
        
         double maxScore;
+        LocalDateTime postgresBeforeTime;
         try {
             Instant instant = Instant.parse(beforeTimestampStr);
             maxScore = (double) instant.toEpochMilli();
+            postgresBeforeTime = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
         } catch (Exception e) {
             System.err.println("Failed to parse historical timestamp: " + e.getMessage());
             // Fallback: If parsing fails, use current time
             maxScore = (double) System.currentTimeMillis();
+            postgresBeforeTime = LocalDateTime.now();
         }
 
     
@@ -276,15 +295,24 @@ public List<GroupChatMessage> getMessagesBefore(String groupId, String beforeTim
 
         System.out.println("Historical Sync: Found " + olderMessages.size() + " messages in Redis.");
 
-        // 3. THE FUTURE POSTGRES FALLBACK:
-        // If olderMessages.size() < limit, it means Redis ran out of older data!
-        // That's when we'll fetch the remainder from Postgres like this:
-        /*
         if (olderMessages.size() < limit) {
-            int remainingNeeded = limit - olderMessages.size();
-            // Fetch the remaining chunk from Postgres...
-        }
-        */
+        int remainingNeeded = limit - olderMessages.size();
+        System.out.println("⚠️ Redis only had " + olderMessages.size() + " messages. Fetching " + remainingNeeded + " more from Postgres...");
+
+
+        Long parsedGroupId = Long.parseLong(groupId);
+        List<GroupChatMessage> dbMessages = groupChatMessageRepository.findHistoricalGaps(
+                parsedGroupId, 
+                postgresBeforeTime, 
+                remainingNeeded
+        );
+
+        List<GroupChatMessage> combined = new ArrayList<>(dbMessages);
+        combined.addAll(olderMessages);
+
+        return combined;
+    }
+     
 
         return olderMessages;
     }
