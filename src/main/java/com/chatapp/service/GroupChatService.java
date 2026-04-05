@@ -385,7 +385,7 @@ public List<GroupChatMessage> getMessagesBefore(String groupId, String beforeTim
     updatePostgresReadCursor(event);
 
     // 3. Task C: (Next Step) Trigger live WebSocket broadcast to other users
-    // broadcastReadReceiptToGroup(event);
+    broadcastReadReceiptToGroup(event);
 }
 
 
@@ -406,5 +406,16 @@ private void updatePostgresReadCursor(GroupReadReceiptEvent event) {
         event.getLastReadMessageId()
     );
     System.out.println("💾 Postgres database updated.");
+}
+
+private void broadcastReadReceiptToGroup(GroupReadReceiptEvent event) {
+    String topic = "/topic/group/" + event.getGroupChatId() + "/read-status";
+    
+    try {
+        messagingTemplate.convertAndSend(topic, event);
+        System.out.println("📡 Broadcasted read receipt to live WebSocket topic: " + topic);
+    } catch (Exception e) {
+        System.err.println("❌ Failed to broadcast read receipt over WebSocket: " + e.getMessage());
+    }
 }
 }
