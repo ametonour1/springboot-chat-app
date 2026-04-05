@@ -22,6 +22,7 @@ import com.chatapp.dto.CachedMessagesRequest;
 import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.ChatMessageReadDto;
 import com.chatapp.dto.GroupChatMessageRequest;
+import com.chatapp.dto.GroupReadReceiptEvent;
 import com.chatapp.dto.MessageStatusEvent;
 import com.chatapp.dto.SocketHandshakeMessage;
 import com.chatapp.dto.SocketHeartbeatMessage;
@@ -33,6 +34,8 @@ import com.chatapp.kafka.MessageStatusProducer;
 import com.chatapp.model.ChatMessageEntity;
 import com.chatapp.model.MessageStatus;
 import com.chatapp.kafka.GroupChatProducer;
+import com.chatapp.kafka.GroupMessageStatusProducer;
+
 
 
 @Controller
@@ -46,6 +49,8 @@ public class SocketController {
     private final MessageStatusProducer messageStatusProducer;
     private final SessionTracker sessionTracker;
     private final GroupChatProducer groupChatProducer;
+    private final GroupMessageStatusProducer groupMessageStatusProducer;
+
 
 
 
@@ -55,7 +60,8 @@ public class SocketController {
                         ChatProducer chatProducer,
                         SessionTracker sessionTracker, ChatService chatService,
                         MessageStatusProducer messageStatusProducer,
-                        GroupChatProducer groupChatProducer) {
+                        GroupChatProducer groupChatProducer,
+                        GroupMessageStatusProducer groupMessageStatusProducer) {
     this.messagingTemplate = messagingTemplate;
     this.redisService = redisService;
     this.chatProducer = chatProducer;  
@@ -63,6 +69,8 @@ public class SocketController {
     this.chatService = chatService;
     this.messageStatusProducer = messageStatusProducer;
     this.groupChatProducer = groupChatProducer;
+    this.groupMessageStatusProducer = groupMessageStatusProducer;
+
 }
   
     @MessageMapping("/register")
@@ -207,5 +215,15 @@ public void handleMarkAsRead(ChatMessageReadDto dto, @Header("simpSessionId") St
         System.out.println("Message received from session: " + sessionId);
         groupChatProducer.sendMessage(message);
 
+    }
+
+    @MessageMapping("/group-chat/read-receipt")
+    public void handleGroupReadReceipt(@Payload GroupReadReceiptEvent event) {
+        
+        System.out.println("Received socket read receipt from User " + event.getUserId() 
+                + " for group " + event.getGroupChatId());
+        
+        // 🚀 FIRE AND FORGET: Hand it over to Kafka immediately!
+        groupMessageStatusProducer.sendGroupReadReceipt(event);
     }
 }

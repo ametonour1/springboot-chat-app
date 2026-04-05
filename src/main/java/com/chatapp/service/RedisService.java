@@ -385,4 +385,12 @@ public List<GroupChatMessage> getMessagesBeforeScore(String groupId, double maxS
     Collections.reverse(messages); // Oldest to Newest for the UI
     return messages;
 }
+
+public void updateHashField(String key, String field, String value) {
+    try {
+        redisTemplate.opsForHash().put(key, field, value);
+    } catch (Exception e) {
+        System.err.println("❌ Failed to update Redis hash for key: " + key + ". Error: " + e.getMessage());
+    }
+}
 }

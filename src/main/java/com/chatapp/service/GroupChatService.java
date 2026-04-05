@@ -21,10 +21,12 @@ import com.chatapp.repository.GroupChatMemberRepository;
 import com.chatapp.repository.GroupChatRepository;
 import com.chatapp.repository.GroupKeyRepository;
 import com.chatapp.repository.GroupChatMessageRepository;
+import com.chatapp.repository.GroupMessageStatusRepository;
 import com.chatapp.dto.CreateGroupChatRequest;
 import com.chatapp.dto.CreateGroupChatRequest.GroupMemberDto;
 import com.chatapp.dto.GroupChatEncryptedKeyDto;
 import com.chatapp.dto.GroupChatMessageRequest;
+import com.chatapp.dto.GroupReadReceiptEvent;
 import com.chatapp.dto.RecentChatterDto;
 import com.chatapp.model.GroupChat;
 import com.chatapp.model.GroupChatMember;
@@ -45,6 +47,8 @@ public class GroupChatService {
     private final RecentChatterService recentChatterService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    private final GroupMessageStatusRepository groupMessageStatusRepository;
+
 
         @Autowired
     public GroupChatService(GroupChatRepository groupChatRepository,
@@ -54,7 +58,8 @@ public class GroupChatService {
                             EncryptionKeyService encryptionKeyService,
                             GroupChatMessageRepository groupChatMessageRepository,
                             RecentChatterService recentChatterService,
-                            SimpMessagingTemplate messagingTemplate
+                            SimpMessagingTemplate messagingTemplate,
+                            GroupMessageStatusRepository groupMessageStatusRepository
                             
                             ) {
         this.groupChatRepository = groupChatRepository;
@@ -65,6 +70,7 @@ public class GroupChatService {
         this.groupChatMessageRepository = groupChatMessageRepository;
         this.recentChatterService = recentChatterService;
         this.messagingTemplate = messagingTemplate;
+        this.groupMessageStatusRepository = groupMessageStatusRepository;
 
     }
 
@@ -367,4 +373,38 @@ public List<GroupChatMessage> getMessagesBefore(String groupId, String beforeTim
 
         return olderMessages;
     }
+
+
+    public void handleGroupReadReceiptOrchestration(GroupReadReceiptEvent event) {
+    
+    System.out.println("🧠 Orchestrating read receipt for Group " + event.getGroupChatId());
+
+    updateRedisReadCursor(event);
+
+
+    updatePostgresReadCursor(event);
+
+    // 3. Task C: (Next Step) Trigger live WebSocket broadcast to other users
+    // broadcastReadReceiptToGroup(event);
+}
+
+
+private void updateRedisReadCursor(GroupReadReceiptEvent event) {
+    String redisKey = "group:" + event.getGroupChatId() + ":read_status";
+    String field = String.valueOf(event.getUserId());
+    String value = String.valueOf(event.getLastReadMessageId());
+    
+    redisService.updateHashField(redisKey, field, value);
+    System.out.println("⚡ Redis cursor updated.");
+}
+
+
+private void updatePostgresReadCursor(GroupReadReceiptEvent event) {
+    groupMessageStatusRepository.upsertUserReadStatus(
+        event.getGroupChatId(), 
+        event.getUserId(), 
+        event.getLastReadMessageId()
+    );
+    System.out.println("💾 Postgres database updated.");
+}
 }

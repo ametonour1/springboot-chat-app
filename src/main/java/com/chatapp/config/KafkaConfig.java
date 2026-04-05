@@ -20,6 +20,7 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import com.chatapp.dto.ChatMessage;
 import com.chatapp.dto.GroupChatMessageRequest;
+import com.chatapp.dto.GroupReadReceiptEvent;
 import com.chatapp.dto.MessageStatusEvent;
 import com.chatapp.dto.UserStatusChangedEvent;
 
@@ -184,4 +185,43 @@ public ConcurrentKafkaListenerContainerFactory<String, GroupChatMessageRequest> 
     factory.setConsumerFactory(groupChatConsumerFactory());
     return factory;
 }
+
+@Bean
+    public ProducerFactory<String, com.chatapp.dto.GroupReadReceiptEvent> groupReadReceiptProducerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
+    @Bean
+    public KafkaTemplate<String, com.chatapp.dto.GroupReadReceiptEvent> groupReadReceiptKafkaTemplate() {
+        return new KafkaTemplate<>(groupReadReceiptProducerFactory());
+    }
+
+    @Bean
+public ConsumerFactory<String, GroupReadReceiptEvent> groupReadReceiptConsumerFactory() {
+    JsonDeserializer<GroupReadReceiptEvent> deserializer = new JsonDeserializer<>(GroupReadReceiptEvent.class);
+    deserializer.addTrustedPackages("*");
+    
+    return new DefaultKafkaConsumerFactory<>(
+        Map.of(
+            ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
+            ConsumerConfig.GROUP_ID_CONFIG, "group-read-receipt-group",
+            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
+            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class
+        ),
+        new StringDeserializer(),
+        deserializer
+    );
 }
+
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, GroupReadReceiptEvent> groupReadReceiptKafkaListenerContainerFactory() {
+    var factory = new ConcurrentKafkaListenerContainerFactory<String, GroupReadReceiptEvent>();
+    factory.setConsumerFactory(groupReadReceiptConsumerFactory());
+    return factory;
+}
+}
+
