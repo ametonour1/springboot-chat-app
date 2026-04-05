@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.time.temporal.ChronoUnit;
 
 import javax.crypto.SecretKey;
 
@@ -91,7 +92,7 @@ public class GroupChatService {
         member.setGroupChatId(savedGroupChat.getId());
         member.setUserId(memberDto.getUserId());
         member.setAdmin(memberDto.getIsAdminUser());
-        member.setJoinedAt(LocalDateTime.now());
+        member.setJoinedAt(LocalDateTime.now((ZoneOffset.UTC)));
         groupChatMemberRepository.save(member);
       
         
@@ -205,7 +206,7 @@ public class GroupChatService {
         entity.setContent(message.getContent());
         entity.setIv(message.getIv());
         entity.setKeyVersion(message.getKeyVersion());
-        entity.setTimestamp(LocalDateTime.now());
+        entity.setTimestamp(Instant.now());
         return groupChatMessageRepository.save(entity);
     } catch (Exception e) {
         e.printStackTrace();
@@ -214,26 +215,54 @@ public class GroupChatService {
     }
     
 
-    public List<GroupChatMessage> getGroupMessages(String groupId, int offset, int limit) {
+   public List<GroupChatMessage> getGroupMessages(String groupId, int offset, int limit) {
 
-        List<GroupChatMessage> cachedMessages = redisService.getCachedMessagesWithOffset(groupId, offset, limit);
+    // 1. Fetch from Redis using your offset
+    List<GroupChatMessage> cachedMessages = redisService.getCachedMessagesWithOffset(groupId, offset, limit);
+    int redisSize = (cachedMessages != null) ? cachedMessages.size() : 0;
 
-  
-        if (cachedMessages.size() < limit) {
-           // This will show up in your IDE console in white text
-            System.out.println("--- CACHE MISS ---");
-            System.out.println("Group ID: " + groupId);
-            System.out.println("Offset: " + offset);
-            System.out.println("Redis returned: " + cachedMessages.size() + " messages.");
-            System.out.println("Action: Need to fetch from Postgres next.");
-            System.out.println("------------------");
-            // TODO: Layer 4 - Fetch the remaining 'n' messages from Postgres
-            // List<GroupChatMessage> dbMessages = groupMessageRepository.findWithOffset(...);
-            // Combine them...
-        }
-
+    // 🟢 SCENARIO 1: Full Cache Hit
+    // If Redis gave us the full requested limit, just return it immediately!
+    if (redisSize >= limit) {
         return cachedMessages;
     }
+
+    System.out.println("--- CACHE MISS / PARTIAL HIT ---");
+    System.out.println("Redis only had " + redisSize + " messages. Fetching from Postgres...");
+    
+    Long parsedGroupId = Long.parseLong(groupId);
+
+    // 🔴 SCENARIO 2: Total Cache Miss
+
+    if (redisSize == 0) {  
+        return groupChatMessageRepository.findInitialMessages(parsedGroupId, limit);
+    }
+
+    // 🟡 SCENARIO 3: Partial Cache Hit
+
+    int remainingNeeded = limit - redisSize;
+
+    // To prevent overlaps, grab the OLDEST message in the Redis chunk (the last index)
+    GroupChatMessage oldestCachedMsg = cachedMessages.get(redisSize - 1);
+    String cutoffTimestampStr = oldestCachedMsg.getTimestamp().toString();
+
+    System.out.println("Sliding cutoff! Pulling " + remainingNeeded + " Postgres messages before: " + cutoffTimestampStr);
+
+  
+    List<GroupChatMessage> dbMessages = groupChatMessageRepository.findHistoricalGaps(
+            parsedGroupId, 
+            cutoffTimestampStr, 
+            remainingNeeded
+    );
+
+ 
+    java.util.Collections.reverse(dbMessages); 
+
+    List<GroupChatMessage> combined = new ArrayList<>(dbMessages);
+    combined.addAll(cachedMessages);
+
+    return combined;
+}
 
     public List<GroupChatMessage> getMessagesAfter(String groupId, String lastTimestampStr) {
     
@@ -287,7 +316,8 @@ public List<GroupChatMessage> getMessagesBefore(String groupId, String beforeTim
             System.err.println("Failed to parse historical timestamp: " + e.getMessage());
             // Fallback: If parsing fails, use current time
             maxScore = (double) System.currentTimeMillis();
-            postgresBeforeTime = LocalDateTime.now();
+            postgresBeforeTime = LocalDateTime.now(ZoneOffset.UTC);
+
         }
 
     
@@ -301,11 +331,32 @@ public List<GroupChatMessage> getMessagesBefore(String groupId, String beforeTim
 
 
         Long parsedGroupId = Long.parseLong(groupId);
+        // 1. DEFAULT: Use the original frontend timestamp
+        String targetTimeStr = postgresBeforeTime.toString(); 
+        
+        // 2. THE FIX: If Redis actually gave us some messages, find the OLDEST one!
+        if (olderMessages.size() > 0) {
+     
+            GroupChatMessage oldestRedisMsg = olderMessages.get(olderMessages.size() - 1);
+            
+           
+            targetTimeStr = oldestRedisMsg.getTimestamp().toString();
+            System.out.println("Sliding cutoff! Now looking for Postgres messages before: " + targetTimeStr);
+        }
+
         List<GroupChatMessage> dbMessages = groupChatMessageRepository.findHistoricalGaps(
                 parsedGroupId, 
-                postgresBeforeTime, 
+                targetTimeStr, 
                 remainingNeeded
         );
+
+        System.out.println("time" + targetTimeStr);
+        System.out.println("groupId" + parsedGroupId);
+        System.out.println("remainingNeeded" + remainingNeeded);
+
+        System.out.println("dbMessages" + dbMessages.size() + " messages in postgres");
+
+        java.util.Collections.reverse(dbMessages); 
 
         List<GroupChatMessage> combined = new ArrayList<>(dbMessages);
         combined.addAll(olderMessages);

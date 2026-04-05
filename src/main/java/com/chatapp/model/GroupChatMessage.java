@@ -2,6 +2,8 @@ package com.chatapp.model;
 
 
 import javax.persistence.*;
+
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -25,7 +27,7 @@ public class GroupChatMessage {
     private String iv;
 
     @Column(name = "timestamp", nullable = false)
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private Instant timestamp;
 
     @Column(name = "key_version", nullable = false)
     private Integer keyVersion = 1;  // default to version 1
@@ -73,13 +75,13 @@ public class GroupChatMessage {
     }
 
 
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
+   public Instant getTimestamp() {
+    return timestamp;
+}
 
-    public void setTimestamp(LocalDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
+public void setTimestamp(Instant timestamp) {
+    this.timestamp = timestamp;
+}
 
     public Integer getKeyVersion() {
     return keyVersion;
