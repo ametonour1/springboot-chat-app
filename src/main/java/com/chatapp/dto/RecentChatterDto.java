@@ -7,16 +7,18 @@ public class RecentChatterDto {
     private boolean isOnline;
     private boolean hasUnreadMessage;
     private String publicKey;
+    private String type;
 
     public RecentChatterDto() {
     }
 
-    public RecentChatterDto(String userId, String username, boolean isOnline, boolean hasUnreadMessage, String publicKey) {
+    public RecentChatterDto(String userId, String username, boolean isOnline, boolean hasUnreadMessage, String publicKey,String type) {
         this.userId = userId;
         this.username = username;
         this.isOnline = isOnline;
         this.hasUnreadMessage = hasUnreadMessage;
         this.publicKey = publicKey;
+        this.type = type;
        
     }
 
@@ -67,5 +69,13 @@ public class RecentChatterDto {
 
     public String getPublicKey() {
         return publicKey;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }

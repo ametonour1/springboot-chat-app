@@ -7,16 +7,22 @@ import org.springframework.stereotype.Service;
 
 
 import com.chatapp.model.ChatMessageEntity;
+import com.chatapp.model.GroupChatMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.time.ZoneOffset;
 
 @Service
 public class RedisService {
@@ -32,6 +38,8 @@ public class RedisService {
     private static final String USER_LAST_SEEN_KEY = "user:lastseen:";
     private static final String CHATTED_WITH_KEY_PREFIX = "recent:chatted:with:";
     private static final String USER_PUBLIC_KEY = "public_key:";
+    private static final String GROUP_MEMBERS_KEY = "members:group:";
+
 
 
     private final ObjectMapper objectMapper = new ObjectMapper()
@@ -219,4 +227,162 @@ public class RedisService {
     public String getUserPublicKey(String userId) {
         return redisTemplate.opsForValue().get(USER_PUBLIC_KEY + userId);
     }
+
+    public Map<String, String> getUsersPublicKeys(List<String> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+        return Collections.emptyMap();
+    }
+
+    List<String> keys = userIds.stream()
+        .map(id -> USER_PUBLIC_KEY + id)
+        .collect(Collectors.toList());
+
+    List<String> values = redisTemplate.opsForValue().multiGet(keys);
+
+    Map<String, String> result = new HashMap<>();
+    for (int i = 0; i < userIds.size(); i++) {
+        result.put(userIds.get(i), values.get(i));
+    }
+    return result;
+}
+    public Map<String, Boolean> getUsersOnlineStatus(List<String> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+        return Collections.emptyMap();
+    }
+
+    Map<String, Boolean> result = new HashMap<>();
+    for (String userId : userIds) {
+        Long count = redisTemplate.opsForSet().size(USER_SOCKETS_KEY + userId);
+        result.put(userId, count != null && count > 0);
+    }
+    return result;
+}
+
+    
+    public void addGroupMember(Long groupId, String userId) {
+        String membersKey = GROUP_MEMBERS_KEY + groupId;
+        redisTemplate.opsForSet().add(membersKey, userId);
+    }
+
+
+    public Set<String> getGroupMembers(Long groupId) {
+        String membersKey = GROUP_MEMBERS_KEY + groupId;
+        Set<String> members = redisTemplate.opsForSet().members(membersKey);
+        return members != null ? members : Collections.emptySet();
+    }
+
+    private static final String GROUP_CACHE_PREFIX = "group:cache:";
+
+public void addToGroupCache(String groupId, GroupChatMessage message) {
+ try {
+        String key = GROUP_CACHE_PREFIX + groupId;
+        
+        // 1. Manually convert Object to JSON String (Matches your 1v1 style)
+        String jsonMessage = objectMapper.writeValueAsString(message);
+
+        // 2. Convert LocalDateTime to Double score
+        double score = message.getTimestamp()
+                              .atZone(ZoneId.systemDefault())
+                              .toInstant()
+                              .toEpochMilli();
+
+        // 3. Add to Sorted Set (This works because jsonMessage is a String)
+        redisTemplate.opsForZSet().add(key, jsonMessage, score);
+
+        // 4. TTL and Trim
+        redisTemplate.expire(key, Duration.ofHours(24));
+        Long count = redisTemplate.opsForZSet().zCard(key);
+        if (count != null && count > 100) {
+            redisTemplate.opsForZSet().removeRange(key, 0, count - 101);
+        }
+    } catch (Exception e) {
+         e.printStackTrace();
+    }
+}
+
+public List<GroupChatMessage> getCachedMessagesWithOffset(String groupId, int offset, int limit) {
+    String key = "group:cache:" + groupId;
+    
+    // Redis returns Set<String> because your template is <String, String>
+    Set<String> cachedJsonMsgs = redisTemplate.opsForZSet().reverseRange(key, offset, offset + limit - 1);
+
+    if (cachedJsonMsgs == null || cachedJsonMsgs.isEmpty()) {
+        return Collections.emptyList();
+    }
+
+    List<GroupChatMessage> messages = new ArrayList<>();
+    try {
+        for (String json : cachedJsonMsgs) {
+            // Manually deserialize just like your 1v1 getCachedMessages
+            GroupChatMessage msg = objectMapper.readValue(json, GroupChatMessage.class);
+            messages.add(msg);
+        }
+    } catch (Exception e) {
+         e.printStackTrace();
+
+    }
+
+    Collections.reverse(messages); // Oldest to Newest for the UI
+    return messages;
+}
+
+public List<GroupChatMessage> getMessagesAfterScore(String groupId, double minScore, int limit) {
+    String key = "group:cache:" + groupId;
+    
+    // We start at minScore + 1 to exclude the message they already have
+    double startScore = minScore + 1.0;
+    double endScore = Double.MAX_VALUE; // All the way to the newest message
+
+    // Fetch the raw JSON strings from the Sorted Set
+    Set<String> jsonMsgs = redisTemplate.opsForZSet().reverseRangeByScore(key, startScore, endScore,0  ,limit);
+
+    if (jsonMsgs == null || jsonMsgs.isEmpty()) {
+        return Collections.emptyList();
+    }
+
+      List<GroupChatMessage> messages = new ArrayList<>();
+    try {
+        for (String json : jsonMsgs) {
+            // Manually deserialize just like your 1v1 getCachedMessages
+            GroupChatMessage msg = objectMapper.readValue(json, GroupChatMessage.class);
+            messages.add(msg);
+        }
+    } catch (Exception e) {
+         e.printStackTrace();
+
+    }
+
+    Collections.reverse(messages); // Oldest to Newest for the UI
+    return messages;
+}
+
+public List<GroupChatMessage> getMessagesBeforeScore(String groupId, double maxScore, int limit) {
+    String key = "group:cache:" + groupId;
+    
+    // We start looking just below the user's oldest message
+    double endScore = maxScore - 1.0; 
+    double startScore = 0; // Go as far back as Redis has memory for
+
+    // Get the messages in descending order (newest of the old messages first)
+    Set<String> jsonMsgs = redisTemplate.opsForZSet().reverseRangeByScore(key, startScore, endScore, 0, limit);
+
+    if (jsonMsgs == null || jsonMsgs.isEmpty()) {
+        return Collections.emptyList();
+    }
+
+       List<GroupChatMessage> messages = new ArrayList<>();
+    try {
+        for (String json : jsonMsgs) {
+            // Manually deserialize just like your 1v1 getCachedMessages
+            GroupChatMessage msg = objectMapper.readValue(json, GroupChatMessage.class);
+            messages.add(msg);
+        }
+    } catch (Exception e) {
+         e.printStackTrace();
+
+    }
+
+    Collections.reverse(messages); // Oldest to Newest for the UI
+    return messages;
+}
 }

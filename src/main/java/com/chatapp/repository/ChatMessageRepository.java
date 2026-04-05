@@ -101,5 +101,25 @@ List<ChatMessageEntity> findMessagesBetweenUsers(
     @Param("offset") int offset,
     @Param("limit") int limit
 );
+
+  @Query("""
+        SELECT m.senderId AS senderId, 
+               CASE WHEN COUNT(m) > 0 THEN true ELSE false END AS hasUnread
+        FROM ChatMessageEntity m
+        WHERE m.senderId IN :senderIds
+          AND m.recipientId = :recipientId
+          AND m.status IN :unreadStatuses
+        GROUP BY m.senderId
+    """)
+    List<SenderUnreadStatus> findUnreadStatusBySenderIdsAndRecipientId(
+        @Param("senderIds") List<Long> senderIds,
+        @Param("recipientId") Long recipientId,
+        @Param("unreadStatuses") List<MessageStatus> unreadStatuses
+    );
+
+    interface SenderUnreadStatus {
+        Long getSenderId();
+        Boolean getHasUnread();
+    }
 }
 

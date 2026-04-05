@@ -39,7 +39,8 @@ public class ChatConsumer {
            //chatService.updateRecentChats(message.getSenderId().toString(), message.getRecipientId().toString());
            chatService.pushRecentChatUpdates(
                 message.getSenderId().toString(),
-                message.getRecipientId().toString()
+                message.getRecipientId().toString(),
+                false
             );
        
     }
