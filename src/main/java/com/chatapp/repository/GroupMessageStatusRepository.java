@@ -2,6 +2,9 @@ package com.chatapp.repository;
 
 import com.chatapp.model.GroupMessageStatus;
 import com.chatapp.model.GroupMessageStatusId;
+
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -29,4 +32,6 @@ public interface GroupMessageStatusRepository extends JpaRepository<GroupMessage
         @Param("userId") Long userId,
         @Param("lastReadMessageId") Long lastReadMessageId
     );
+
+    List<GroupMessageStatus> findByGroupChatId(Long groupChatId);
 }

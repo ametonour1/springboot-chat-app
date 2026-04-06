@@ -27,6 +27,8 @@ public class GroupReadReceiptEvent {
 
     private Long lastReadMessageId;
 
+    private String username;
+    
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
 }
