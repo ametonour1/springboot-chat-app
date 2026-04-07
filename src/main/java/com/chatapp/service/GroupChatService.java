@@ -7,8 +7,12 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Collections;
+
+import java.util.stream.Collectors;
 import java.time.temporal.ChronoUnit;
 
 import javax.crypto.SecretKey;
@@ -21,15 +25,20 @@ import com.chatapp.repository.GroupChatMemberRepository;
 import com.chatapp.repository.GroupChatRepository;
 import com.chatapp.repository.GroupKeyRepository;
 import com.chatapp.repository.GroupChatMessageRepository;
+import com.chatapp.repository.GroupMessageStatusRepository;
 import com.chatapp.dto.CreateGroupChatRequest;
 import com.chatapp.dto.CreateGroupChatRequest.GroupMemberDto;
 import com.chatapp.dto.GroupChatEncryptedKeyDto;
 import com.chatapp.dto.GroupChatMessageRequest;
+import com.chatapp.dto.GroupReadReceiptEvent;
 import com.chatapp.dto.RecentChatterDto;
+import com.chatapp.dto.UserSummaryDTO;
 import com.chatapp.model.GroupChat;
 import com.chatapp.model.GroupChatMember;
 import com.chatapp.model.GroupChatMessage;
 import com.chatapp.model.GroupKeyEntity;
+import com.chatapp.model.GroupMessageStatus;
+
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 
@@ -45,6 +54,8 @@ public class GroupChatService {
     private final RecentChatterService recentChatterService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    private final GroupMessageStatusRepository groupMessageStatusRepository;
+
 
         @Autowired
     public GroupChatService(GroupChatRepository groupChatRepository,
@@ -54,7 +65,8 @@ public class GroupChatService {
                             EncryptionKeyService encryptionKeyService,
                             GroupChatMessageRepository groupChatMessageRepository,
                             RecentChatterService recentChatterService,
-                            SimpMessagingTemplate messagingTemplate
+                            SimpMessagingTemplate messagingTemplate,
+                            GroupMessageStatusRepository groupMessageStatusRepository
                             
                             ) {
         this.groupChatRepository = groupChatRepository;
@@ -65,6 +77,7 @@ public class GroupChatService {
         this.groupChatMessageRepository = groupChatMessageRepository;
         this.recentChatterService = recentChatterService;
         this.messagingTemplate = messagingTemplate;
+        this.groupMessageStatusRepository = groupMessageStatusRepository;
 
     }
 
@@ -367,4 +380,115 @@ public List<GroupChatMessage> getMessagesBefore(String groupId, String beforeTim
 
         return olderMessages;
     }
+
+
+    public void handleGroupReadReceiptOrchestration(GroupReadReceiptEvent event) {
+    
+    System.out.println("🧠 Orchestrating read receipt for Group " + event.getGroupChatId());
+
+    updateRedisReadCursor(event);
+
+
+    updatePostgresReadCursor(event);
+
+    // 3. Task C: (Next Step) Trigger live WebSocket broadcast to other users
+    broadcastReadReceiptToGroup(event);
+}
+
+
+private void updateRedisReadCursor(GroupReadReceiptEvent event) {
+    String redisKey = "group:" + event.getGroupChatId() + ":read_status";
+    String field = String.valueOf(event.getUserId());
+    String value = String.valueOf(event.getLastReadMessageId());
+    
+    redisService.updateHashField(redisKey, field, value);
+    System.out.println("⚡ Redis cursor updated.");
+}
+
+
+private void updatePostgresReadCursor(GroupReadReceiptEvent event) {
+    groupMessageStatusRepository.upsertUserReadStatus(
+        event.getGroupChatId(), 
+        event.getUserId(), 
+        event.getLastReadMessageId()
+    );
+    System.out.println("💾 Postgres database updated.");
+}
+
+
+private void broadcastReadReceiptToGroup(GroupReadReceiptEvent event) {
+    String topic = "/topic/group/" + event.getGroupChatId() + "/read-status";
+    
+    try {
+        messagingTemplate.convertAndSend(topic, event);
+        System.out.println("📡 Broadcasted read receipt to live WebSocket topic: " + topic);
+    } catch (Exception e) {
+        System.err.println("❌ Failed to broadcast read receipt over WebSocket: " + e.getMessage());
+    }
+}
+
+
+private Map<Long, Long> getReadCursorsFromRedis(Long groupId) {
+    String redisKey = "group:" + groupId + ":read_status";
+    
+
+    Map<String, String> rawHash = redisService.getEntireHash(redisKey);
+    
+    if (rawHash == null || rawHash.isEmpty()) {
+        return Collections.emptyMap();
+    }
+    
+   
+    return rawHash.entrySet().stream()
+            .collect(Collectors.toMap(
+                e -> Long.valueOf(e.getKey()),
+                e -> Long.valueOf(e.getValue())
+            ));
+}
+
+
+private Map<Long, Long> getReadCursorsFromPostgres(Long groupId) {
+
+    List<GroupMessageStatus> statuses = groupMessageStatusRepository.findByGroupChatId(groupId);
+    
+    if (statuses == null || statuses.isEmpty()) {
+        return Collections.emptyMap();
+    }
+    
+
+    return statuses.stream()
+            .collect(Collectors.toMap(
+                GroupMessageStatus::getUserId,
+                GroupMessageStatus::getLastReadMessageId
+            ));
+}
+
+
+public Map<Long, Long> getReadCursors(Long groupId) {
+    Map<Long, Long> cursors = getReadCursorsFromRedis(groupId);
+    
+    if (!cursors.isEmpty()) {
+        System.out.println("⚡ Read cursors fetched from Redis for group: " + groupId);
+        return cursors;
+    }
+    
+ 
+    System.out.println("💾 Redis miss. Fetching read cursors from Postgres for group: " + groupId);
+    cursors = getReadCursorsFromPostgres(groupId);
+    
+  
+    if (!cursors.isEmpty()) {
+        String redisKey = "group:" + groupId + ":read_status";
+        cursors.forEach((userId, lastReadMessageId) -> {
+            redisService.updateHashField(redisKey, String.valueOf(userId), String.valueOf(lastReadMessageId));
+        });
+        System.out.println("🔄 Repopulated Redis with Postgres cursors for group: " + groupId);
+    }
+    
+    return cursors;
+}
+
+public List<UserSummaryDTO> getGroupMembers(Long groupId) {
+    return groupChatMemberRepository.findMembersByGroupId(groupId);
+}
 }

@@ -385,4 +385,32 @@ public List<GroupChatMessage> getMessagesBeforeScore(String groupId, double maxS
     Collections.reverse(messages); // Oldest to Newest for the UI
     return messages;
 }
+
+public void updateHashField(String key, String field, String value) {
+    try {
+        redisTemplate.opsForHash().put(key, field, value);
+    } catch (Exception e) {
+        System.err.println("❌ Failed to update Redis hash for key: " + key + ". Error: " + e.getMessage());
+    }
+}
+
+public Map<String, String> getEntireHash(String key) {
+        try {
+            Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+            
+            if (entries.isEmpty()) {
+                return Collections.emptyMap();
+            }
+            
+            return entries.entrySet().stream()
+                    .collect(Collectors.toMap(
+                        e -> String.valueOf(e.getKey()),
+                        e -> String.valueOf(e.getValue())
+                    ));
+                    
+        } catch (Exception e) {
+            System.err.println("❌ Failed to fetch hash from Redis for key " + key + ": " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
 }
