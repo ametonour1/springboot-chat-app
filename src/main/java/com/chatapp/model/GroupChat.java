@@ -23,6 +23,9 @@ public class GroupChat {
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
+    @Column(name = "current_key_version", nullable = false)
+    private Integer currentKeyVersion = 1;
+
     // Getters and setters
 
     public Long getId() {
@@ -58,5 +61,13 @@ public class GroupChat {
 
     public void setCreatedBy(Long createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public Integer getCurrentKeyVersion() {
+        return currentKeyVersion;
+    }
+
+    public void setCurrentKeyVersion(Integer currentKeyVersion) {
+        this.currentKeyVersion = currentKeyVersion;
     }
 }
