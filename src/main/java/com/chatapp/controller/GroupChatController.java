@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.chatapp.dto.CreateGroupChatRequest;
 import com.chatapp.dto.GroupChatEncryptedKeyDto;
+import com.chatapp.dto.GroupMetadataDTO;
 import com.chatapp.dto.UserSummaryDTO;
 import com.chatapp.model.GroupChat;
 import com.chatapp.model.GroupChatMessage;
@@ -112,4 +113,14 @@ public ResponseEntity<List<GroupChatMessage>> getHistoricalMessages(
         
         return ResponseEntity.ok(cursors);
     }   
+
+
+@GetMapping("/{groupId}/metadata")
+public ResponseEntity<GroupMetadataDTO> getGroupMetadata(@PathVariable Long groupId) {
+    System.out.println("API Request: Fetching full metadata for group " + groupId);
+    
+    GroupMetadataDTO metadata = groupChatService.getGroupMetadata(groupId);
+    
+    return ResponseEntity.ok(metadata);
+}
 }   

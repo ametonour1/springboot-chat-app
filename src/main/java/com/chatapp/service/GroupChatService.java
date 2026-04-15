@@ -30,6 +30,7 @@ import com.chatapp.dto.CreateGroupChatRequest;
 import com.chatapp.dto.CreateGroupChatRequest.GroupMemberDto;
 import com.chatapp.dto.GroupChatEncryptedKeyDto;
 import com.chatapp.dto.GroupChatMessageRequest;
+import com.chatapp.dto.GroupMetadataDTO;
 import com.chatapp.dto.GroupReadReceiptEvent;
 import com.chatapp.dto.RecentChatterDto;
 import com.chatapp.dto.UserSummaryDTO;
@@ -490,5 +491,21 @@ public Map<Long, Long> getReadCursors(Long groupId) {
 
 public List<UserSummaryDTO> getGroupMembers(Long groupId) {
     return groupChatMemberRepository.findMembersByGroupId(groupId);
+}
+
+public GroupMetadataDTO getGroupMetadata(Long groupId) {
+    Integer version = groupChatRepository.findKeyVersionById(groupId);
+    if (version == null) version = 1; 
+
+    List<UserSummaryDTO> members = getGroupMembers(groupId);
+
+    Map<Long, Long> cursors = getReadCursors(groupId);
+
+    return GroupMetadataDTO.builder()
+            .groupId(groupId)
+            .currentKeyVersion(version)
+            .members(members)
+            .readCursors(cursors)
+            .build();
 }
 }
