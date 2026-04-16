@@ -13,7 +13,7 @@ public interface GroupChatMemberRepository extends JpaRepository<GroupChatMember
     List<GroupChatMember> findByUserId(Long userId);
     boolean existsByGroupChatIdAndUserId(Long groupChatId, Long userId);
 
-  @Query("SELECT new com.chatapp.dto.UserSummaryDTO(u.id, u.username, gcm.isAdmin) " +
+@Query("SELECT new com.chatapp.dto.UserSummaryDTO(u.id, u.username, gcm.isAdmin) " +
        "FROM GroupChatMember gcm " +
        "JOIN User u ON gcm.userId = u.id " + 
        "WHERE gcm.groupChatId = :groupChatId")

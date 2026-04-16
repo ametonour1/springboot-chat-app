@@ -490,7 +490,18 @@ public Map<Long, Long> getReadCursors(Long groupId) {
 }
 
 public List<UserSummaryDTO> getGroupMembers(Long groupId) {
-    return groupChatMemberRepository.findMembersByGroupId(groupId);
+    List<UserSummaryDTO> members = groupChatMemberRepository.findMembersByGroupId(groupId);
+
+   
+    members.forEach(member -> {
+        String publicKey = redisService.getUserPublicKey(member.getUserId().toString());
+        
+        // If Redis is empty (evicted), you may want a fallback to the User entity 
+        // or simply ensure your frontend handles a null (though Redis is usually reliable here).
+        member.setPublicKey(publicKey);
+    });
+
+    return members;
 }
 
 public GroupMetadataDTO getGroupMetadata(Long groupId) {
