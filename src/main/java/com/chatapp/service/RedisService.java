@@ -271,6 +271,13 @@ public class RedisService {
         return members != null ? members : Collections.emptySet();
     }
 
+    public void removeGroupMember(Long groupId, long kickedUserId) {
+    String membersKey = GROUP_MEMBERS_KEY + groupId;
+    String userIdStr = String.valueOf(kickedUserId);
+  
+    redisTemplate.opsForSet().remove(membersKey, userIdStr);
+}
+
     private static final String GROUP_CACHE_PREFIX = "group:cache:";
 
 public void addToGroupCache(String groupId, GroupChatMessage message) {

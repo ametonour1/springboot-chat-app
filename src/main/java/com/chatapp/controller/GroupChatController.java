@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import com.chatapp.dto.CreateGroupChatRequest;
 import com.chatapp.dto.GroupChatEncryptedKeyDto;
 import com.chatapp.dto.GroupMetadataDTO;
+import com.chatapp.dto.KickMemberRequest;
 import com.chatapp.dto.UserSummaryDTO;
 import com.chatapp.model.GroupChat;
 import com.chatapp.model.GroupChatMessage;
@@ -123,4 +124,24 @@ public ResponseEntity<GroupMetadataDTO> getGroupMetadata(@PathVariable Long grou
     
     return ResponseEntity.ok(metadata);
 }
+@PostMapping("/{groupId}/kick")
+    public ResponseEntity<?> kickMember(
+            @PathVariable Long groupId,
+            @RequestBody KickMemberRequest request,
+            Authentication authentication) {
+
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        Long adminId = principal.getUserId();
+         System.out.println("kick user api " + adminId);
+
+        try {
+            groupChatService.kickMemberAndRotate(groupId, adminId, request);
+            
+         return ResponseEntity.ok().body(Map.of("message", "Member kicked and keys rotated successfully."));
+        } catch (Exception e) {
+            // It's good practice to log the error here
+            return ResponseEntity.badRequest().body("Failed to kick member: " + e.getMessage());
+        }
+    }
+
 }   
