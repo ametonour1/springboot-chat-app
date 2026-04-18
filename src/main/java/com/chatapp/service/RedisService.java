@@ -130,6 +130,11 @@ public class RedisService {
     String key = CHATTED_WITH_KEY_PREFIX + targetUserId;
     redisTemplate.opsForSet().add(key, chatterId);
     }
+    public void removeChattedWith(String targetUserId, String chatterId) {
+    String key = CHATTED_WITH_KEY_PREFIX + targetUserId;
+    // Removes the chatterId from the Set
+    redisTemplate.opsForSet().remove(key, chatterId);
+}
 
     public Set<String> getUsersWhoChattedWith(String userId) {
         String key = CHATTED_WITH_KEY_PREFIX + userId;
@@ -149,6 +154,13 @@ public class RedisService {
         addChattedWith(userId, chatterId);
     }
 
+    public void removeRecentChatter(String userId, String chatterId) {
+    String RECENT_CHATTERS_KEY = RECENT_CHATTERS_KEY_PREFIX + userId; 
+
+    redisTemplate.opsForList().remove(RECENT_CHATTERS_KEY, 0, chatterId);
+   
+    removeChattedWith(userId, chatterId);
+}
     public List<String> getRecentChatters(String userId) {
 
         String RECENT_CHATTERS_KEY = RECENT_CHATTERS_KEY_PREFIX + userId; 

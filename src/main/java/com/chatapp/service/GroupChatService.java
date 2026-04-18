@@ -156,17 +156,18 @@ public class GroupChatService {
 // }
 
     public List<GroupChatEncryptedKeyDto> getEncryptedKeysForUserAndGroup(Long userId, Long groupChatId) {
-        return groupKeyRepository.findByGroupChatIdAndUserId(groupChatId, userId)
-            .map(entity -> List.of(
-                new GroupChatEncryptedKeyDto(
-                    entity.getUserId(),
-                    entity.getEncryptedKey(),
-                    entity.getKeyVersion(),
-                    entity.getIv()
-                )
+        List<GroupKeyEntity> entities = groupKeyRepository.findByGroupChatIdAndUserIdOrderByKeyVersionDesc(groupChatId, userId);
+    
+        // 2. Map the entire list to DTOs
+        return entities.stream()
+            .map(entity -> new GroupChatEncryptedKeyDto(
+                entity.getUserId(),
+                entity.getEncryptedKey(),
+                entity.getKeyVersion(),
+                entity.getIv()
             ))
-            .orElse(List.of());
-    }
+            .collect(Collectors.toList());
+        }
 
     public Optional<GroupChat> getGroupChatById(Long id) {
         return groupChatRepository.findById(id);
@@ -565,6 +566,7 @@ public GroupMetadataDTO getGroupMetadata(Long groupId) {
 
 
     kickMember(groupId, request.getKickedUserId());
+    recentChatterService.pushRecentChatUpdatesForGroupUserRemoved(groupId, request.getKickedUserId());
 
 
     incrementGroupVersion(groupId);
