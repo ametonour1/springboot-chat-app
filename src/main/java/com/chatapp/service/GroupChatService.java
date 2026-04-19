@@ -582,8 +582,31 @@ public GroupMetadataDTO getGroupMetadata(Long groupId) {
         
         groupKeyRepository.save(memberKey);
     }
-    
+    notifyGroupOfChange(groupId, request.getKickedUserId(), newVersion);
     
     System.out.println("Group " + groupId + " rotated to V" + newVersion + " after kick.");
 }
+    public void notifyGroupOfChange(Long groupId, Long kickedUserId, int newVersion) {
+        String groupRoom = "/topic/group/" + groupId;
+
+  
+        Map<String, Object> groupPayload = Map.of(
+            "type", "KEY_ROTATION",
+            "groupId", groupId,
+            "newVersion", newVersion,
+            "kickedUserId", kickedUserId,
+            "message", "A member was removed. Security keys updated."
+        );
+        messagingTemplate.convertAndSend(groupRoom, groupPayload);
+
+        Map<String, Object> kickPayload = Map.of(
+            "type", "YOU_ARE_KICKED",
+            "groupId", groupId
+        );
+        messagingTemplate.convertAndSendToUser(
+            String.valueOf(kickedUserId), 
+            "/queue/kick", 
+            kickPayload
+        );
+    }
 }
