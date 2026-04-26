@@ -11,9 +11,11 @@ public interface GroupKeyRepository extends JpaRepository<GroupKeyEntity, Long> 
 
     List<GroupKeyEntity> findByGroupChatId(Long groupChatId);
 
-    Optional<GroupKeyEntity> findByGroupChatIdAndUserId(Long groupChatId, Long userId);
+    List<GroupKeyEntity> findByGroupChatIdAndUserId(Long groupChatId, Long userId);
 
     List<GroupKeyEntity> findByGroupChatIdAndKeyVersion(Long groupChatId, Integer keyVersion);
+
+    List<GroupKeyEntity> findByGroupChatIdAndUserIdOrderByKeyVersionDesc(Long groupChatId, Long userId);
 
     void deleteByGroupChatIdAndUserId(Long groupChatId, Long userId);
 

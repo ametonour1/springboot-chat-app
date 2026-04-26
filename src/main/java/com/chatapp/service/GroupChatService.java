@@ -18,8 +18,10 @@ import java.time.temporal.ChronoUnit;
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.chatapp.repository.GroupChatMemberRepository;
 import com.chatapp.repository.GroupChatRepository;
@@ -30,7 +32,9 @@ import com.chatapp.dto.CreateGroupChatRequest;
 import com.chatapp.dto.CreateGroupChatRequest.GroupMemberDto;
 import com.chatapp.dto.GroupChatEncryptedKeyDto;
 import com.chatapp.dto.GroupChatMessageRequest;
+import com.chatapp.dto.GroupMetadataDTO;
 import com.chatapp.dto.GroupReadReceiptEvent;
+import com.chatapp.dto.KickMemberRequest;
 import com.chatapp.dto.RecentChatterDto;
 import com.chatapp.dto.UserSummaryDTO;
 import com.chatapp.model.GroupChat;
@@ -152,17 +156,18 @@ public class GroupChatService {
 // }
 
     public List<GroupChatEncryptedKeyDto> getEncryptedKeysForUserAndGroup(Long userId, Long groupChatId) {
-        return groupKeyRepository.findByGroupChatIdAndUserId(groupChatId, userId)
-            .map(entity -> List.of(
-                new GroupChatEncryptedKeyDto(
-                    entity.getUserId(),
-                    entity.getEncryptedKey(),
-                    entity.getKeyVersion(),
-                    entity.getIv()
-                )
+        List<GroupKeyEntity> entities = groupKeyRepository.findByGroupChatIdAndUserIdOrderByKeyVersionDesc(groupChatId, userId);
+    
+        // 2. Map the entire list to DTOs
+        return entities.stream()
+            .map(entity -> new GroupChatEncryptedKeyDto(
+                entity.getUserId(),
+                entity.getEncryptedKey(),
+                entity.getKeyVersion(),
+                entity.getIv()
             ))
-            .orElse(List.of());
-    }
+            .collect(Collectors.toList());
+        }
 
     public Optional<GroupChat> getGroupChatById(Long id) {
         return groupChatRepository.findById(id);
@@ -489,6 +494,119 @@ public Map<Long, Long> getReadCursors(Long groupId) {
 }
 
 public List<UserSummaryDTO> getGroupMembers(Long groupId) {
-    return groupChatMemberRepository.findMembersByGroupId(groupId);
+    List<UserSummaryDTO> members = groupChatMemberRepository.findMembersByGroupId(groupId);
+
+   
+    members.forEach(member -> {
+        String publicKey = redisService.getUserPublicKey(member.getUserId().toString());
+        
+        // If Redis is empty (evicted), you may want a fallback to the User entity 
+        // or simply ensure your frontend handles a null (though Redis is usually reliable here).
+        member.setPublicKey(publicKey);
+    });
+
+    return members;
 }
+
+public GroupMetadataDTO getGroupMetadata(Long groupId) {
+    Integer version = groupChatRepository.findKeyVersionById(groupId);
+    if (version == null) version = 1; 
+
+    List<UserSummaryDTO> members = getGroupMembers(groupId);
+
+    Map<Long, Long> cursors = getReadCursors(groupId);
+
+    return GroupMetadataDTO.builder()
+            .groupId(groupId)
+            .currentKeyVersion(version)
+            .members(members)
+            .readCursors(cursors)
+            .build();
+}
+
+    public boolean isUserAdmin(Long groupId, Long userId) {
+            //return groupChatMemberRepository.existsByGroupChatIdAndUserIdAndIsAdminTrue(groupId, userId);
+            System.out.println("Checking admin status: User=" + userId + ", Group=" + groupId);
+    
+           
+            boolean isAdmin = groupChatMemberRepository.existsByGroupChatIdAndUserIdAndIsAdminTrue(groupId, userId);
+            
+            System.out.println("Result from Database: " + isAdmin);
+            return isAdmin;
+        }
+
+
+    @Transactional
+    public void kickMember(Long groupId, Long kickedUserId) {
+        groupChatMemberRepository.deleteByGroupIdAndUserId(groupId, kickedUserId);
+        
+        redisService.removeGroupMember(groupId, kickedUserId);
+        
+        System.out.println("User " + kickedUserId + " removed from Group " + groupId + " in DB and Redis.");
+    }
+
+    // 4. Get current version helper
+    public Integer findKeyVersionById(Long groupId) {
+        return groupChatRepository.findKeyVersionById(groupId);
+    }
+
+    // 5. Increment version helper
+    @Transactional
+    public void incrementGroupVersion(Long groupId) {
+        groupChatRepository.incrementKeyVersion(groupId);
+    }
+
+    @Transactional
+    public void kickMemberAndRotate(Long groupId, Long adminId, KickMemberRequest request) {
+    // 1. Authorization: Is the requester an admin?
+    if (!isUserAdmin(groupId, adminId)) {
+        System.out.println("User " + adminId + " is not admin for" + groupId );
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can kick members");
+    }
+
+
+    kickMember(groupId, request.getKickedUserId());
+    recentChatterService.pushRecentChatUpdatesForGroupUserRemoved(groupId, request.getKickedUserId());
+
+
+    incrementGroupVersion(groupId);
+    int newVersion = findKeyVersionById(groupId);
+
+    for (KickMemberRequest.GroupMemberKeyDto memberDto : request.getMembers()) { // Changed type here
+        GroupKeyEntity memberKey = new GroupKeyEntity();
+        memberKey.setUserId(memberDto.getUserId());
+        memberKey.setGroupChatId(groupId);
+        memberKey.setEncryptedKey(memberDto.getEncryptedKey());
+        memberKey.setKeyVersion(newVersion);
+        memberKey.setIv(memberDto.getIv());
+        
+        groupKeyRepository.save(memberKey);
+    }
+    notifyGroupOfChange(groupId, request.getKickedUserId(), newVersion);
+    
+    System.out.println("Group " + groupId + " rotated to V" + newVersion + " after kick.");
+}
+    public void notifyGroupOfChange(Long groupId, Long kickedUserId, int newVersion) {
+        String groupRoom = "/topic/group/" + groupId;
+
+  
+        Map<String, Object> groupPayload = Map.of(
+            "type", "KEY_ROTATION",
+            "groupId", groupId,
+            "newVersion", newVersion,
+            "kickedUserId", kickedUserId,
+            "message", "A member was removed. Security keys updated."
+        );
+        messagingTemplate.convertAndSend(groupRoom, groupPayload);
+
+        Map<String, Object> kickPayload = Map.of(
+            "type", "YOU_ARE_KICKED",
+            "groupId", groupId
+        );
+        messagingTemplate.convertAndSendToUser(
+            String.valueOf(kickedUserId), 
+            "/queue/kick", 
+            kickPayload
+        );
+    }
 }

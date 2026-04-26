@@ -124,6 +124,11 @@ public class RecentChatterService {
     String prefixedGroupId = "group_" + groupId;
     redisService.addRecentChatter(userId, prefixedGroupId);
 }
+  
+    public void updateRecentGroupChatUserRemoved(String userId, String groupId) {
+    String prefixedGroupId = "group_" + groupId;
+    redisService.removeRecentChatter(userId, prefixedGroupId);
+}
 
 
     public void emitRecentChatsUpdate(String userId, List<RecentChatterDto> chats) {
@@ -176,6 +181,21 @@ public class RecentChatterService {
         }
     }
 }
+    public void pushRecentChatUpdatesForGroupUserRemoved(Long groupId, Long userId) {
+        // Get group members from Redis
+        String userIdStr = String.valueOf(userId);
+       
+        updateRecentGroupChatUserRemoved(userIdStr, groupId.toString()); // isGroup = true
+
+            // Push updates if member is online
+            if (redisService.isUserOnline(userIdStr)) {
+                List<RecentChatterDto> chats = getRecentChattersWithDetails(userIdStr);
+                  System.out.println("emit updates for user " + userIdStr );
+
+                emitRecentChatsUpdate(userIdStr, chats);
+            }
+        
+    }
 
   public List<GroupChat> getGroupsByIds(List<String> groupIds) {
         // Convert String IDs to Long
